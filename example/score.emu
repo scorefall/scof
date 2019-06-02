@@ -1,0 +1,13 @@
+// score.emu
+signature: 0 key=C time=4/4 divisions=16 tempo=144
+signature: 1 key=C time=4/4 divisions=16 tempo=100
+measure: 0
+    part: 0 notes=R;16
+    part: 1 key=G notes=[fff E4;1 E4;1 E4;1 E4;1 E4;2 E4;2 R;8]
+        : lyric=[these are sil- ly ly- rics]
+measure: 0
+    part: 0 notes=C4;16
+    part: 1 notes=R;16
+measure: 1
+    part: 0 notes=C4,E4,G4;16
+    part: 1 notes=R;16
