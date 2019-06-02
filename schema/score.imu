@@ -1,17 +1,18 @@
-// score.emu schema
+// score.imu schema
 
 /// Change the signature of the measure.
 /// - sign_id: The ID associated with this signature.
 /// - key: Which key
 ///        C: The key of C.
-///        C$: The key of C (3/4 step) sharp.
-///        C|: The key of C (1/4 step) sharp.
-///        Cp: The key of C (3/4 step) flat.
-///        Cd: The key of C (1/4 step) flat.
 ///        C#: The key of C (1/2 step) sharp.
 ///        Cb: The Key of C (1/2 step) flat.
-///        C&: The key of C (1 step) flat.
 ///        Cx: The key of C (1 step) sharp.
+///        Cp: The key of C (1 step) flat.
+///         - micro tonal -
+///        Cd: The key of C (1/4 step) flat.
+///        Cq: The key of C (3/4 step) flat.
+///        C$: The key of C (1/4 step) sharp.
+///        Cy: The key of C (3/4 step) sharp.
 /// - time: num_beats/note_len
 /// - divisions: how many of the smallest unit of time are in the measure
 /// - tempo: in BPM, 120 is common.
@@ -32,8 +33,10 @@ measure: default=sign_id repeat=$repeat
         $note_class$note_octave;$duration$articulation?
         /// Breath mark
         `
-        /// Caesura (everyone waits long)
-        "
+        /// Short Caesura || (everyone pauses)
+        |
+        /// Long Caesura // (everyone pauses)
+        ||
         /// Crescendo (getting stronger), Decrescendo (getting softer).
         < >
         /// Start playing pizzicato
@@ -48,23 +51,23 @@ measure: default=sign_id repeat=$repeat
         %
     ]
 
-/// - &: Double flat
-/// - p: 3/4 tone flat
-/// - b: 1/2 tone flat (normal flat)
-/// - d: 1/4 tone flat
-/// - : natural
-/// - |: 1/4 tone sharp
-/// - #: 1/2 tone sharp (normal sharp)
-/// - $: 3/4 tone sharp
-/// - x: Double sharp
+/// - "p" Double flat
+/// - "q" 3/4 tone flat
+/// - "b" 1/2 tone flat (normal flat)
+/// - "d" 1/4 tone flat
+/// - "" natural
+/// - "$" 1/4 tone sharp
+/// - "#" 1/2 tone sharp (normal sharp)
+/// - "y" 3/4 tone sharp
+/// - "x" Double sharp
 $note_class: [
-    C& Cp Cb Cd C C| C# C$ Cx
-    D& Dp Db Dd D D| D# D$ Dx
-    E& Ep Eb Ed E E| E# E$ Ex
-    F& Fp Fb Fd F F| F# F$ Fx
-    G& Gp Gb Gd G G| G# G$ Gx
-    A& Ap Ab Ad A A| A# A$ Ax
-    B& Bp Bb Bd B B| B# B$ Bx
+    Cp Cq Cb Cd C C$ C# Cy Cx
+    Dp Dq Db Dd D D$ D# Dy Dx
+    Ep Eq Eb Ed E E$ E# Ey Ex
+    Fp Fq Fb Fd F F$ F# Fy Fx
+    Gp Gq Gb Gd G G$ G# Gy Gx
+    Ap Aq Ab Ad A A$ A# Ay Ax
+    Bp Bq Bb Bd B B$ B# By Bx
 ]
 
 $note_octave: [
@@ -73,7 +76,7 @@ $note_octave: [
 
 /// Includes "ornaments"
 $articulation: [
-    ' // ' staccatissimo
+    .. // ' staccatissimo
     . // . staccato (short 1/2)
     ! // ^ marcato (short sharp attack) (2/3)
     !. // marcato staccato
@@ -95,7 +98,7 @@ $articulation: [
     O // Harmonic
     s // Turn
     tr // Trill
-    *1 // Tremelo (with length 1)
+    &1 // Tremelo (with length 1)
     ^ // Arpeggio (strum) up
     v // Arpeggio (strum) down
     _ // Pedal

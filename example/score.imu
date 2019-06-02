@@ -1,4 +1,4 @@
-// score.emu
+// score.imu
 signature: 0 key=C time=4/4 divisions=16 tempo=144
 signature: 1 key=C time=4/4 divisions=16 tempo=100
 measure: 0
