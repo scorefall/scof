@@ -49,6 +49,10 @@ measure: default=sign_id repeat=$repeat
         open
         /// Repeat previous measure
         %
+        /// Grace note into
+        (
+        /// Grace note out of
+        )
     ]
 
 /// - "p" Double flat
@@ -95,7 +99,7 @@ $articulation: [
     ? // Fermata (everyone plays long)
     + // Closed mute
     o // Open mute
-    O // Harmonic
+    * // Harmonic (smaller o)
     s // Turn
     tr // Trill
     &1 // Tremelo (with length 1)
