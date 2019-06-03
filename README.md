@@ -1,5 +1,9 @@
-# SM3
-ScoreFall Music Macro Markup Language (SM3).  Takes Music Macro Language and adds XML-like functionality (like Music Markup Language), but nicer - using meaningful whitespace like Python.
+# ScoreIMU (*.score)
+Music score format developed for ScoreFall based on IMU (Icy MarkUp).
+
+## Format
+Format is a zip file.  An example contents are in `score/`.
+
 
 ## Language
 4-space indentation.  Like MusicXML, each file represents a movement.

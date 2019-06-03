@@ -20,7 +20,8 @@ signature: default=sign_id key time divisions tempo
 
 /// A measure in the score.
 measure: default=sign_id repeat=$repeat
-    ch: default=channel_id notes=[
+    /// A channel.
+    chan: default=channel_id notes=[
         /// From soft to strong
         pppppp ppppp pppp ppp pp p mp mf f ff fff ffff fffff ffffff
         /// Silence
