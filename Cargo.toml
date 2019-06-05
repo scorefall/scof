@@ -4,4 +4,13 @@ version = "0.1.0"
 authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
 edition = "2018"
 
+license = "MIT"
+description = "Parser for SCOF: A Score File Format for Music."
+documentation = "https://docs.rs/scof"
+homepage = "https://scorefall.github.io/scof/"
+repository = "https://github.com/scorefall/scof"
+readme = "README.md"
+keywords = ["music", "format", "scof", "score", "muon"]
+categories = ["data-structures", "encoding", "parser-implementations"]
+
 [dependencies]
