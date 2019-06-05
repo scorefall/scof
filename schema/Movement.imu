@@ -1,8 +1,8 @@
 # Movement.imu schema
 
-# Define a signature for the measure.
-sign:
-   # Which key are the following measure in?
+# Define a signature
+sig: [table]
+   # Which key are the following measures in?
    #  - C: The key of C.
    #  - C#: The key of C (1/2 step) sharp.
    #  - Cb: The Key of C (1/2 step) flat.
@@ -13,20 +13,18 @@ sign:
    #  - Cq: The key of C (3/4 step) flat.
    #  - C!: The key of C (1/4 step) sharp.
    #  - C*: The key of C (3/4 step) sharp.
-   key: String
+   key: text
    # Time Signature (num_beats/note_len)
-   time: String
+   time: text
    # BPM (beats per minute), 120 is common.
-   tempo: u16
-   # Optional Text describing the style.
-   style: Option<String>
+   tempo: int
    # Swing (new % for half a beat - the default is 50%)
-   swing: Option<u8>
+   swing: int?
 
 # A bar (measure) of music.
-bar:
+bar: [table]
    # A channel.
-   chan: [
+   chan: [table]
       # List of notes.
       #
       # --- Soft to strong ---
@@ -91,10 +89,10 @@ bar:
       # M   arpeggio (strum) pitch up, strum guitar down
       # W   arpeggio (strum) pitch down, strum guitar up
       # []  pedal
-      notes: String
+      notes: text
       # Lyrics
-      lyric: Option<String>
-   ]
+      lyric: text?
+
    # Open -- ||:
    # Close -- :|| 
    # Segno -- Sign (to jump backwards to).
@@ -104,4 +102,4 @@ bar:
    # To Coda -- Jump forward to the coda.
    # Fine -- End here (after jumping backwards to the sign).
    # Ending(u8) -- Numbered ending.
-   repeat: String
+   repeat: text?
