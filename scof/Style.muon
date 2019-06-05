@@ -1,0 +1,8 @@
+# Define signature tables:
+sig:
+sig:
+   time_symbol: true
+   tempo: Allegro
+   swing_text: Swing = 60%
+
+

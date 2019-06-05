@@ -1,9 +1,9 @@
-# Movement.imu schema
+# Movement/*.muon schema
 
 # Define a signature
 sig: [table]
    # Which key are the following measures in?
-   #  - C: The key of C.
+   #  - Cn: The key of C natural.
    #  - C#: The key of C (1/2 step) sharp.
    #  - Cb: The Key of C (1/2 step) flat.
    #  - Cx: The key of C (1 step) sharp.
@@ -58,7 +58,7 @@ bar: [table]
       # mute    Start playing muted.
       # open    Start playing without the mute.
       # %       Repeat previous measure
-      # {       Repeat previous measure
+      # {       Grace note in of
       # }       Grace note out of
       #
       # --- Articulation ---
@@ -94,7 +94,7 @@ bar: [table]
       lyric: text?
 
    # Open -- ||:
-   # Close -- :|| 
+   # Close -- :||
    # Segno -- Sign (to jump backwards to).
    # DC -- Jump back to beginning.
    # DS -- Jump back to sign.

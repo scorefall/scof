@@ -1,3 +1,3 @@
-rm a.score
-cd score/
-zip -r ../a.score *
+rm a.scof
+cd scof/
+zip -r ../a.scof *

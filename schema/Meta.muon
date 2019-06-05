@@ -1,0 +1,13 @@
+# Meta.muon schema
+
+# Who wrote the music
+composer: text
+
+# Who wrote the lyrics to the music
+lyricist: text
+
+# List of people who arranged & rearranged the music in order.
+arranger: [text]
+
+# List of the movements in order.
+movement: [text]
