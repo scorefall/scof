@@ -183,9 +183,9 @@ pub enum Marking {
     Pizz,
     /// Arco (bowed)
     Arco,
-    /// Standard Mute [con sorde]
+    /// Standard Mute [con sordino]
     Mute,
-    /// Open (no mute) [sin sorde]
+    /// Open (no mute) [senza sordino]
     Open,
     /// Repeat
     Repeat,
@@ -218,10 +218,10 @@ pub enum Repeat {
 
 /// A bar (or measure) of music.
 pub struct Bar {
-    /// All of the channels in this peice.
+    /// All of the channels in this piece.
     pub chan: Vec<Chan>,
     /// 
-    pub repeat: Option<Repeat>,
+    pub repeat: Vec<Repeat>,
 }
 
 /// A movement in the score.
