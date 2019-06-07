@@ -234,12 +234,32 @@ pub struct Movement {
 
 /// A parsed SCOF file.
 pub struct Scof {
+    /// The title of the piece.
+    pub title: String,
+    ///The subtitle of the piece.
+    pub subtitle: String,
+    /// Work number.
+    pub number: u32,
     /// Who wrote the music.
-    pub composer: String,
+    pub music: String,
     /// Who wrote the lyrics to the music.
-    pub lyricist: String,
+    pub words: String,
+    /// Who translated the lyrics "Translated by {}"
+    pub translator: String,
+    /// Who performed the music "Performed by {}"
+    pub performers: Strings,
     /// List of people who arranged & rearranged the music in order.
-    pub arranger: Vec<String>,
+    pub arranger: Vec<(String, String)>,
+    /// List of people who revised the score "Revised by {}".
+    pub revised: Vec<String>,
+    /// List of licenses that apply to this score.
+    pub license: Vec<String>,
+    /// Score notes - usually for conductor (Markdown)
+    pub notes: String,
+    /// Grade of the peice * 2.
+    pub grade: u32,
+    /// Cover picture (SVG).
+    pub cover: String,
     /// List of the movements name & data in order.
     pub movement: Vec<(String, Movement)>,
     /// Rendering style.
