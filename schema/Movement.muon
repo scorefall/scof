@@ -23,6 +23,8 @@ sig: [table]
 
 # A bar (measure) of music.
 bar: [table]
+   # Signature index
+   sig: int?
    # A channel.
    chan: [table]
       # List of notes.
@@ -89,7 +91,7 @@ bar: [table]
       # M   arpeggio (strum) pitch up, strum guitar down
       # W   arpeggio (strum) pitch down, strum guitar up
       # []  pedal
-      notes: text
+      notes: default text
       # Lyrics
       lyric: text?
 
@@ -102,4 +104,4 @@ bar: [table]
    # To Coda -- Jump forward to the coda.
    # Fine -- End here (after jumping backwards to the sign).
    # Ending(u8) -- Numbered ending.
-   repeat: text?
+   repeat: [text]
