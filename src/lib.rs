@@ -247,7 +247,7 @@ pub struct Scof {
     /// Who translated the lyrics "Translated by {}"
     pub translator: String,
     /// Who performed the music "Performed by {}"
-    pub performers: Strings,
+    pub performers: String,
     /// List of people who arranged & rearranged the music in order.
     pub arranger: Vec<(String, String)>,
     /// List of people who revised the score "Revised by {}".
