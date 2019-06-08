@@ -1,5 +1,5 @@
 # Movement/*.muon schema
-
+:::
 # Define a signature
 sig: [table]
    # Which key are the following measures in?
@@ -91,7 +91,7 @@ bar: [table]
       # M   arpeggio (strum) pitch up, strum guitar down
       # W   arpeggio (strum) pitch down, strum guitar up
       # []  pedal
-      notes: default text
+      notes: text default
       # Lyrics
       lyric: text?
 
@@ -105,3 +105,4 @@ bar: [table]
    # Fine -- End here (after jumping backwards to the sign).
    # Ending(u8) -- Numbered ending.
    repeat: [text]
+:::

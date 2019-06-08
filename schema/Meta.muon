@@ -1,5 +1,5 @@
 # Meta.muon schema
-
+:::
 # The title of the piece.
 title: text
 
@@ -23,7 +23,7 @@ performers: text?
 
 # List of people who arranged & rearranged the music in order "Arranged for {} by {}".
 arranger: [table]
-   name: default text
+   name: text default
    ensemble: text?
 
 # List of people who revised the score "Revised by {}".
@@ -100,3 +100,4 @@ cover: text
 
 # List of the movements in order.
 movement: [text]
+:::

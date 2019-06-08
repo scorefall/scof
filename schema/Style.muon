@@ -1,5 +1,5 @@
 # Style.muon schema
-
+:::
 # Style a signature
 sig: [table]
    # Whether or not the time signature should use a special symbol (C for 4/4).
@@ -10,3 +10,4 @@ sig: [table]
    # Text that should show up rather than default.
    # "eighth eighth = triplet quarter, triple eighth"
    swing_text: text?
+:::
