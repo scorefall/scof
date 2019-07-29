@@ -3,19 +3,19 @@
 # Define a signature
 sig: [table]
    # Which key are the following measures in?
-   #  - Cn: The key of C natural.
-   #  - C#: The key of C (1/2 step) sharp.
+   #  - Cn (0): The key of C natural.
+   #  - C# (2): The key of C (1/2 step) sharp.
    #  - Cb: The Key of C (1/2 step) flat.
-   #  - Cx: The key of C (1 step) sharp.
+   #  - Cx / Dn (4): The key of C (1 step) sharp.
    #  - Cp: The key of C (1 step) flat.
    #   [microtonal]
    #  - Cd: The key of C (1/4 step) flat.
    #  - Cq: The key of C (3/4 step) flat.
-   #  - C!: The key of C (1/4 step) sharp.
-   #  - C*: The key of C (3/4 step) sharp.
-   key: text
+   #  - C! (1): The key of C (1/4 step) sharp.
+   #  - C* (3): The key of C (3/4 step) sharp.
+   key: int
    # Time Signature (num_beats/note_len)
-   time: text
+   time: int int
    # BPM (beats per minute), 120 is common.
    tempo: int
    # Swing (new % for half a beat - the default is 50%)

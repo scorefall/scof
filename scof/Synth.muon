@@ -1,8 +1,6 @@
-// _synth.imu
-
-/// Set synthesis for channel 0
+# Set synthesis for channel 0
 chan: 0
-    patch: 
+    instrument: 
     volume: 
     reverb: 
 chan: 1

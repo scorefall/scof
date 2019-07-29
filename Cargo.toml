@@ -1,11 +1,28 @@
+# Scof - A Music Score File Format
+#
+# Copyright (C) 2019 Jeron Aldaron Lau <jeronlau@plopgrizzly.com>, Doug P. Lau
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+# 
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+# 
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 [package]
 name = "scof"
 version = "0.1.0"
 authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
 edition = "2018"
 
-license = "MIT"
-description = "Parser for SCOF: A Score File Format for Music."
+license = "GPL"
+description = "Parser for SCOF: A Music Score File Format."
 documentation = "https://docs.rs/scof"
 homepage = "https://scorefall.github.io/scof/"
 repository = "https://github.com/scorefall/scof"
@@ -14,3 +31,6 @@ keywords = ["music", "format", "scof", "score", "muon"]
 categories = ["data-structures", "encoding", "parser-implementations"]
 
 [dependencies]
+muon-rs = { version = "0.1", path = "../muon-rs"}
+serde = "1.0"
+serde_derive = "1.0"
