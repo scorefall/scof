@@ -23,7 +23,7 @@ performers: text?
 
 # List of people who arranged & rearranged the music in order "Arranged for {} by {}".
 arranger: [table]
-   name: text default
+   name: text
    ensemble: text?
 
 # List of people who revised the score "Revised by {}".

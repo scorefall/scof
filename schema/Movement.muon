@@ -91,7 +91,7 @@ bar: [table]
       # M   arpeggio (strum) pitch up, strum guitar down
       # W   arpeggio (strum) pitch down, strum guitar up
       # []  pedal
-      notes: text default
+      notes: text
       # Lyrics
       lyric: text?
 

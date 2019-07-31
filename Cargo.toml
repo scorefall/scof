@@ -18,7 +18,10 @@
 [package]
 name = "scof"
 version = "0.1.0"
-authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>"]
+authors = [
+    "Jeron Aldaron Lau <jeronlau@plopgrizzly.com>",
+    "Doug Lau <doug.p.lau@gmail.com>",
+]
 edition = "2018"
 
 license = "GPL"
@@ -31,6 +34,6 @@ keywords = ["music", "format", "scof", "score", "muon"]
 categories = ["data-structures", "encoding", "parser-implementations"]
 
 [dependencies]
-muon-rs = { version = "0.1", path = "../muon-rs"}
+muon-rs = "0.1" # { path = "../muon-rs"}
 serde = "1.0"
 serde_derive = "1.0"
