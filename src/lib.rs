@@ -324,14 +324,19 @@ pub struct SoundFont {
     pub instrument: Vec<Instrument>,
 }*/
 
+fn default_symtime() -> bool {
+    false // Don't show a symbol for time signature.
+}
+
 /// Signature Style.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct SigStyle {
-    /// Whether or not the time signature should use a special symbol
-    /// (C for 4/4).  Default=false
-    pub time_symbol: Option<bool>,
     /// Text that should show up.  Default="beat = BPM" marking.
     pub tempo: Option<String>,
+    /// Whether or not the time signature should use a special symbol
+    /// (C for 4/4).
+    #[serde(default = "default_symtime")]
+    pub time_symbol: bool,
     /// Text that should show up rather than default.
     /// Default="1/8 1/8 = 1/6 1/12"
     pub swing_text: Option<String>,
@@ -350,15 +355,20 @@ pub struct Arranger {
     ensemble: Option<String>,
 }
 
+fn default_composer() -> String {
+    "Anonymous".to_string()
+}
+
 /// Score metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Meta {
+    /// Who wrote the original music "{}"
+    #[serde(default = "default_composer")]
+    pub composer: String,
     /// The subtitle of the piece.
     pub subtitle: Option<String>,
     /// Work number.
     pub number: Option<u32>,
-    /// Who wrote the original music "{}"
-    pub composer: String,
     /// Who wrote the lyrics to the music "Words by {}"
     pub lyricist: Option<String>,
     /// Who translated the lyrics "Translated by {}"
@@ -383,7 +393,7 @@ impl Default for Meta {
         Self {
             subtitle: None,
             number: None,
-            composer: "Anonymous".to_string(),
+            composer: default_composer(),
             lyricist: None,
             translator: None,
             performers: None,

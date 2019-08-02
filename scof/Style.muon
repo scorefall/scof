@@ -1,4 +1,4 @@
 sig:
-sig: true
-  tempo: Allegro
+sig: Allegro
+  time_symbol: true
   swing_text: Swing = 60%
