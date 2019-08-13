@@ -1,0 +1,7 @@
+sig:
+  key: 0
+  time: 4/4
+  tempo: 120
+bar:
+  sig: 0
+  chan: 4R 4R 2R

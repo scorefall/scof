@@ -138,10 +138,12 @@ pub enum Articulation {
 
 /// A note.
 pub struct Note {
-    pub pitch: PitchClass,
-    pub octave: i8,
+    /// Pitch & Octave
+    pub pitch: Option<(PitchClass, i8)>,
+    /// Duration of the note as a fraction.
     pub duration: (u8, u8),
-    pub articulation: Articulation,
+    /// Articulation.
+    pub articulation: Option<Articulation>,
 }
 
 /// A marking.
@@ -259,7 +261,7 @@ pub struct Sig {
 /// Channel information for a specific bar of music.
 #[derive(PartialEq, Debug, Default, Serialize, Deserialize)]
 pub struct Chan {
-    notes: String,
+    notes: Vec<String>,
     lyric: Option<String>,
 }
 
@@ -275,12 +277,18 @@ pub struct Bar {
 }
 
 /// A movement in the score.
-#[derive(PartialEq, Debug, Default, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Movement {
     /// A list of key signatures used in this movement.
     pub sig: Vec<Sig>,
     /// Each measure of the movement in order.
     pub bar: Vec<Bar>,
+}
+
+impl Default for Movement {
+    fn default() -> Movement {
+        muon::from_str(include_str!("default_movement.muon")).unwrap()
+    }
 }
 
 /// An instrument in the soundfont for this score.
@@ -441,7 +449,37 @@ impl Default for Scof {
     }
 }
 
-impl<R> From<R> for Scof where R: std::io::Read {
+impl Scof {
+    pub fn get(&self, bar: usize, chan: usize, curs: usize) -> Option<Marking> {
+        let string = self.movement[0].bar.get(bar)?.chan[chan].notes.get(curs)?;
+
+        // Read duration.
+        let start_index = 0;
+        let mut end_index = 0;
+        for (i, c) in string.char_indices() {
+            if !c.is_numeric() {
+                end_index = i;
+                break;
+            }
+        }
+
+        let num = string[start_index..end_index].parse::<u8>().unwrap();
+
+        // Read note name.
+        match string.get(end_index..end_index+1)? {
+            "R" => {
+                Some(Marking::Note(Note {
+                    pitch: None,
+                    duration: (1, num),
+                    articulation: None,
+                }))
+            }
+            a => panic!("Failed to parse '{}'", a),
+        }
+    }
+}
+
+/*impl<R> From<R> for Scof where R: std::io::Read {
     fn from(a: R) -> Self {
         let mut rtn = Self::default();
 
@@ -449,7 +487,7 @@ impl<R> From<R> for Scof where R: std::io::Read {
 
         rtn
     }
-}
+}*/
 
 #[cfg(test)]
 mod tests {
