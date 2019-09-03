@@ -262,7 +262,7 @@ pub struct Sig {
 #[derive(PartialEq, Debug, Default, Serialize, Deserialize)]
 pub struct Chan {
     notes: Vec<String>,
-    lyric: Option<String>,
+    lyric: Vec<String>,
 }
 
 /// A bar (or measure) of music.
@@ -450,7 +450,7 @@ impl Default for Scof {
 }
 
 impl Scof {
-    pub fn get(&self, bar: usize, chan: usize, curs: usize) -> Option<Marking> {
+    pub fn marking(&self, bar: usize, chan: usize, curs: usize) -> Option<Marking> {
         let string = self.movement[0].bar.get(bar)?.chan[chan].notes.get(curs)?;
 
         // Read duration.
@@ -463,18 +463,37 @@ impl Scof {
             }
         }
 
-        let num = string[start_index..end_index].parse::<u8>().unwrap();
+        let denom = string[start_index..end_index].parse::<u8>().unwrap();
 
         // Read note name.
-        match string.get(end_index..end_index+1)? {
+        match string.get(end_index..)? {
             "R" => {
                 Some(Marking::Note(Note {
                     pitch: None,
-                    duration: (1, num),
+                    duration: (1, denom),
                     articulation: None,
                 }))
             }
-            a => panic!("Failed to parse '{}'", a),
+            a => {
+                let two = a.chars().collect::<Vec<char>>();
+                let letter_name = two[0];
+                let octave_num = str::parse::<i8>(&format!("{}", two[1])).unwrap();
+
+                Some(Marking::Note(Note {
+                    pitch: Some((match letter_name {
+                        'A' => PitchClass {name: PitchName::A, accidental: None},
+                        'B' => PitchClass {name: PitchName::B, accidental: None},
+                        'C' => PitchClass {name: PitchName::C, accidental: None},
+                        'D' => PitchClass {name: PitchName::D, accidental: None},
+                        'E' => PitchClass {name: PitchName::E, accidental: None},
+                        'F' => PitchClass {name: PitchName::F, accidental: None},
+                        'G' => PitchClass {name: PitchName::G, accidental: None},
+                        a => panic!("Failed to parse '{}'", a),
+                    }, octave_num)),
+                    duration: (1, denom),
+                    articulation: None,
+                }))
+            }
         }
     }
 }
