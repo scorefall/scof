@@ -148,6 +148,27 @@ pub struct Note {
     pub articulation: Option<Articulation>,
 }
 
+impl Note {
+    /// Get the note's visual distance from middle C (C4).
+    pub fn visual_distance(&self) -> i32 {
+        if let Some(ref pitch) = self.pitch {
+            let octave_offset = -7 * (pitch.1 as i32 - 4);
+            octave_offset
+                - match pitch.0.name {
+                    PitchName::C => 0,
+                    PitchName::D => 1,
+                    PitchName::E => 2,
+                    PitchName::F => 3,
+                    PitchName::G => 4,
+                    PitchName::A => 5,
+                    PitchName::B => 6,
+                }
+        } else {
+            0
+        }
+    }
+}
+
 /// A marking.
 pub enum Marking {
     /// Change intensity of sound.
@@ -451,6 +472,27 @@ impl Default for Scof {
 }
 
 impl Scof {
+    pub fn new_measure(&mut self) {
+        let last_bar = &self.movement[0].bar[self.movement[0].bar.len() - 1];
+        let mut chan = vec![];
+
+        // Add whole rests for each channel.
+        for i in last_bar.chan.iter() {
+            chan.push(Chan {
+                notes: vec!["1R".to_string()], // Insert whole Rest
+                lyric: vec![],
+            });
+        }
+
+        let new_bar = Bar {
+            sig: None,      // No signature changes
+            repeat: vec![], // No repeat symbols
+            chan,
+        };
+
+        self.movement[0].bar.push(new_bar);
+    }
+
     pub fn marking(
         &self,
         bar: usize,
