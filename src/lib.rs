@@ -6,12 +6,12 @@
 //     it under the terms of the GNU General Public License as published by
 //     the Free Software Foundation, either version 3 of the License, or
 //     (at your option) any later version.
-// 
+//
 //     This program is distributed in the hope that it will be useful,
 //     but WITHOUT ANY WARRANTY; without even the implied warranty of
 //     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //     GNU General Public License for more details.
-// 
+//
 //     You should have received a copy of the GNU General Public License
 //     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -31,23 +31,23 @@ pub enum PitchName {
 
 /// A Pitch Accidental.
 pub enum PitchAccidental {
-    /// 
+    ///
     DoubleFlat,
-    /// 
+    ///
     FlatQuarterFlat,
-    /// 
+    ///
     Flat,
-    /// 
+    ///
     QuarterFlat,
-    /// 
+    ///
     Natural,
-    /// 
+    ///
     QuarterSharp,
-    /// 
+    ///
     Sharp,
-    /// 
+    ///
     SharpQuarterSharp,
-    /// 
+    ///
     DoubleSharp,
 }
 
@@ -74,8 +74,10 @@ pub enum Dynamic {
     FFFFF,
     FFFFFF,
     N,
-    SF, SFZ,
-    FP, SFP,
+    SF,
+    SFZ,
+    FP,
+    SFP,
 }
 
 /// An articulation (affects how the note is played).
@@ -227,17 +229,16 @@ pub struct SynthChan {
     waveform: Vec<String>,
     /// Instrument effects.
     effect: Vec<u32>,
-//    ///
-//    sounds: Vec<Sound>,
+    //    ///
+    //    sounds: Vec<Sound>,
     /// Volume: 0-1
     volume: f32,
-
 }
 
 /// Synthesis file.
 #[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Synth {
-    /// Instrument presets, 
+    /// Instrument presets,
     /// Reverb presets, IDs automatically assigned.
     effect: Vec<Effect>,
     /// Channels
@@ -450,8 +451,14 @@ impl Default for Scof {
 }
 
 impl Scof {
-    pub fn marking(&self, bar: usize, chan: usize, curs: usize) -> Option<Marking> {
-        let string = self.movement[0].bar.get(bar)?.chan[chan].notes.get(curs)?;
+    pub fn marking(
+        &self,
+        bar: usize,
+        chan: usize,
+        curs: usize,
+    ) -> Option<Marking> {
+        let string =
+            self.movement[0].bar.get(bar)?.chan[chan].notes.get(curs)?;
 
         // Read duration.
         let start_index = 0;
@@ -467,29 +474,52 @@ impl Scof {
 
         // Read note name.
         match string.get(end_index..)? {
-            "R" => {
-                Some(Marking::Note(Note {
-                    pitch: None,
-                    duration: (1, denom),
-                    articulation: None,
-                }))
-            }
+            "R" => Some(Marking::Note(Note {
+                pitch: None,
+                duration: (1, denom),
+                articulation: None,
+            })),
             a => {
                 let two = a.chars().collect::<Vec<char>>();
                 let letter_name = two[0];
-                let octave_num = str::parse::<i8>(&format!("{}", two[1])).unwrap();
+                let octave_num =
+                    str::parse::<i8>(&format!("{}", two[1])).unwrap();
 
                 Some(Marking::Note(Note {
-                    pitch: Some((match letter_name {
-                        'A' => PitchClass {name: PitchName::A, accidental: None},
-                        'B' => PitchClass {name: PitchName::B, accidental: None},
-                        'C' => PitchClass {name: PitchName::C, accidental: None},
-                        'D' => PitchClass {name: PitchName::D, accidental: None},
-                        'E' => PitchClass {name: PitchName::E, accidental: None},
-                        'F' => PitchClass {name: PitchName::F, accidental: None},
-                        'G' => PitchClass {name: PitchName::G, accidental: None},
-                        a => panic!("Failed to parse '{}'", a),
-                    }, octave_num)),
+                    pitch: Some((
+                        match letter_name {
+                            'A' => PitchClass {
+                                name: PitchName::A,
+                                accidental: None,
+                            },
+                            'B' => PitchClass {
+                                name: PitchName::B,
+                                accidental: None,
+                            },
+                            'C' => PitchClass {
+                                name: PitchName::C,
+                                accidental: None,
+                            },
+                            'D' => PitchClass {
+                                name: PitchName::D,
+                                accidental: None,
+                            },
+                            'E' => PitchClass {
+                                name: PitchName::E,
+                                accidental: None,
+                            },
+                            'F' => PitchClass {
+                                name: PitchName::F,
+                                accidental: None,
+                            },
+                            'G' => PitchClass {
+                                name: PitchName::G,
+                                accidental: None,
+                            },
+                            a => panic!("Failed to parse '{}'", a),
+                        },
+                        octave_num,
+                    )),
                     duration: (1, denom),
                     articulation: None,
                 }))
