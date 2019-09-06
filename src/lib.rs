@@ -30,6 +30,7 @@ pub enum PitchName {
 }
 
 /// A Pitch Accidental.
+#[derive(Copy, Clone)]
 pub enum PitchAccidental {
     ///
     DoubleFlat,
@@ -81,6 +82,7 @@ pub enum Dynamic {
 }
 
 /// An articulation (affects how the note is played).
+#[derive(Copy, Clone)]
 pub enum Articulation {
     /// Really separated.
     Staccatissimo,
@@ -165,6 +167,66 @@ impl Note {
                 }
         } else {
             0
+        }
+    }
+
+    /// Calculate note one step up within the key.
+    /// - `create`: Note that is generated from a rest.
+    pub fn step_up(&self, create: (PitchClass, i8)) -> Note {
+        let pitch = if let Some(ref pitch) = self.pitch {
+            let (pitch_class, offset) = match pitch.0.name {
+                PitchName::A => (PitchName::B, 0),
+                PitchName::B => (PitchName::C, 1),
+                PitchName::C => (PitchName::D, 0),
+                PitchName::D => (PitchName::E, 0),
+                PitchName::E => (PitchName::F, 0),
+                PitchName::F => (PitchName::G, 0),
+                PitchName::G => (PitchName::A, 0),
+            };
+            let pitch_octave = pitch.1 + offset;
+
+            Some((PitchClass {
+                name: pitch_class,
+                accidental: pitch.0.accidental,
+            }, pitch_octave))
+        } else {
+            Some(create)
+        };
+
+        Note {
+            pitch,
+            duration: self.duration,
+            articulation: self.articulation,
+        }
+    }
+
+    /// Calculate note one step down within the key.
+    /// - `create`: Note that is generated from a rest.
+    pub fn step_down(&self, create: (PitchClass, i8)) -> Note {
+        let pitch = if let Some(ref pitch) = self.pitch {
+            let (pitch_class, offset) = match pitch.0.name {
+                PitchName::A => (PitchName::G, 0),
+                PitchName::B => (PitchName::A, 0),
+                PitchName::C => (PitchName::B, -1),
+                PitchName::D => (PitchName::C, 0),
+                PitchName::E => (PitchName::D, 0),
+                PitchName::F => (PitchName::E, 0),
+                PitchName::G => (PitchName::F, 0),
+            };
+            let pitch_octave = pitch.1 + offset;
+
+            Some((PitchClass {
+                name: pitch_class,
+                accidental: pitch.0.accidental,
+            }, pitch_octave))
+        } else {
+            Some(create)
+        };
+
+        Note {
+            pitch,
+            duration: self.duration,
+            articulation: self.articulation,
         }
     }
 }
@@ -567,6 +629,47 @@ impl Scof {
                 }))
             }
         }
+    }
+
+    /// Set pitch class and octave.
+    pub fn set_pitch(
+        &mut self,
+        bar: usize,
+        chan: usize,
+        curs: usize,
+        pitch: (PitchClass, i8),
+    ) {
+        let string =
+            self.movement[0].bar.get(bar).unwrap().chan[chan].notes.get(curs).unwrap();
+
+        // Read duration.
+        let start_index = 0;
+        let mut end_index = 0;
+        for (i, c) in string.char_indices() {
+            if !c.is_numeric() {
+                end_index = i;
+                break;
+            }
+        }
+
+        let mut string = string[..end_index].to_string();
+
+        // Read note name.
+        let class = match pitch.0.name {
+            PitchName::A => "A",
+            PitchName::B => "B",
+            PitchName::C => "C",
+            PitchName::D => "D",
+            PitchName::E => "E",
+            PitchName::F => "F",
+            PitchName::G => "G",
+        };
+        let octave = format!("{}", pitch.1);
+
+        string.push_str(class);
+        string.push_str(&octave);
+
+        self.movement[0].bar[bar].chan[chan].notes[curs] = string;
     }
 }
 
