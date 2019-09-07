@@ -170,10 +170,44 @@ impl Note {
         }
     }
 
+    fn move_step(&self, create: (PitchClass, i8), run: &dyn Fn(&(PitchClass, i8)) -> Option<(PitchClass, i8)>) -> Note {
+        let pitch = if let Some(ref pitch) = self.pitch {
+            (run)(pitch)
+        } else {
+            Some(create)
+        };
+
+        Note {
+            pitch,
+            duration: self.duration,
+            articulation: self.articulation,
+        }
+    }
+
+/*    /// Calculate note one quarter step up.
+    pub fn quarter_step_up(&self, create: (PitchClass, i8)) -> Note {
+        
+    }
+
+    /// Calculate note one quarter step down.
+    pub fn quarter_step_down(&self, create: (PitchClass, i8)) -> Note {
+        
+    }*/
+
+    /// Calculate note one half step up.
+    pub fn half_step_up(&self, create: (PitchClass, i8)) -> Note {
+        self.step_up(create) // FIXME
+    }
+
+    /// Calculate note one half step down.
+    pub fn half_step_down(&self, create: (PitchClass, i8)) -> Note {
+        self.step_down(create) // FIXME
+    }
+
     /// Calculate note one step up within the key.
     /// - `create`: Note that is generated from a rest.
     pub fn step_up(&self, create: (PitchClass, i8)) -> Note {
-        let pitch = if let Some(ref pitch) = self.pitch {
+        self.move_step(create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::B, 0),
                 PitchName::B => (PitchName::C, 1),
@@ -188,22 +222,14 @@ impl Note {
             Some((PitchClass {
                 name: pitch_class,
                 accidental: pitch.0.accidental,
-            }, pitch_octave))
-        } else {
-            Some(create)
-        };
-
-        Note {
-            pitch,
-            duration: self.duration,
-            articulation: self.articulation,
-        }
+            }, pitch_octave))            
+        })
     }
 
     /// Calculate note one step down within the key.
     /// - `create`: Note that is generated from a rest.
     pub fn step_down(&self, create: (PitchClass, i8)) -> Note {
-        let pitch = if let Some(ref pitch) = self.pitch {
+        self.move_step(create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::G, 0),
                 PitchName::B => (PitchName::A, 0),
@@ -218,16 +244,8 @@ impl Note {
             Some((PitchClass {
                 name: pitch_class,
                 accidental: pitch.0.accidental,
-            }, pitch_octave))
-        } else {
-            Some(create)
-        };
-
-        Note {
-            pitch,
-            duration: self.duration,
-            articulation: self.articulation,
-        }
+            }, pitch_octave))            
+        })
     }
 }
 
