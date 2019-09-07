@@ -194,6 +194,78 @@ pub struct Note {
     pub articulation: Option<Articulation>,
 }
 
+impl FromStr for Note {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Read duration.
+        let start_index = 0;
+        let mut end_index = 0;
+        for (i, c) in s.char_indices() {
+            if !c.is_numeric() {
+                end_index = i;
+                break;
+            }
+        }
+        let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
+
+        // Read note name.
+        match s.get(end_index..).ok_or(())? {
+            "R" => Ok(Note {
+                pitch: None,
+                duration: (1, denom),
+                articulation: None,
+            }),
+            a => {
+                let two = a.chars().collect::<Vec<char>>();
+                let letter_name = two[0];
+                let octave_num = str::parse::<i8>(&format!("{}", two[1]))
+                    .or(Err(()))?;
+
+                Ok(Note {
+                    pitch: Some((
+                        match letter_name {
+                            'A' => PitchClass {
+                                name: PitchName::A,
+                                accidental: None,
+                            },
+                            'B' => PitchClass {
+                                name: PitchName::B,
+                                accidental: None,
+                            },
+                            'C' => PitchClass {
+                                name: PitchName::C,
+                                accidental: None,
+                            },
+                            'D' => PitchClass {
+                                name: PitchName::D,
+                                accidental: None,
+                            },
+                            'E' => PitchClass {
+                                name: PitchName::E,
+                                accidental: None,
+                            },
+                            'F' => PitchClass {
+                                name: PitchName::F,
+                                accidental: None,
+                            },
+                            'G' => PitchClass {
+                                name: PitchName::G,
+                                accidental: None,
+                            },
+                            // FIXME: return Err
+                            a => panic!("Failed to parse '{}'", a),
+                        },
+                        octave_num,
+                    )),
+                    duration: (1, denom),
+                    articulation: None,
+                })
+            }
+        }
+    }
+}
+
 impl Note {
     /// Get the note's visual distance from middle C (C4).
     pub fn visual_distance(&self) -> i32 {
@@ -327,73 +399,9 @@ pub enum Marking {
 
 impl FromStr for Marking {
     type Err = ();
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-
-        // Read duration.
-        let start_index = 0;
-        let mut end_index = 0;
-        for (i, c) in s.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
-            }
-        }
-
-        let denom = s[start_index..end_index].parse::<u8>().unwrap();
-
-        // Read note name.
-        match s.get(end_index..).ok_or(())? {
-            "R" => Ok(Marking::Note(Note {
-                pitch: None,
-                duration: (1, denom),
-                articulation: None,
-            })),
-            a => {
-                let two = a.chars().collect::<Vec<char>>();
-                let letter_name = two[0];
-                let octave_num =
-                    str::parse::<i8>(&format!("{}", two[1])).unwrap();
-
-                Ok(Marking::Note(Note {
-                    pitch: Some((
-                        match letter_name {
-                            'A' => PitchClass {
-                                name: PitchName::A,
-                                accidental: None,
-                            },
-                            'B' => PitchClass {
-                                name: PitchName::B,
-                                accidental: None,
-                            },
-                            'C' => PitchClass {
-                                name: PitchName::C,
-                                accidental: None,
-                            },
-                            'D' => PitchClass {
-                                name: PitchName::D,
-                                accidental: None,
-                            },
-                            'E' => PitchClass {
-                                name: PitchName::E,
-                                accidental: None,
-                            },
-                            'F' => PitchClass {
-                                name: PitchName::F,
-                                accidental: None,
-                            },
-                            'G' => PitchClass {
-                                name: PitchName::G,
-                                accidental: None,
-                            },
-                            a => panic!("Failed to parse '{}'", a),
-                        },
-                        octave_num,
-                    )),
-                    duration: (1, denom),
-                    articulation: None,
-                }))
-            }
-        }
+        Ok(Marking::Note(s.parse::<Note>()?))
     }
 }
 
