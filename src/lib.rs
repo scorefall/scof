@@ -17,6 +17,7 @@
 
 use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -322,6 +323,78 @@ pub enum Marking {
     Open,
     /// Repeat
     Repeat,
+}
+
+impl FromStr for Marking {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+
+        // Read duration.
+        let start_index = 0;
+        let mut end_index = 0;
+        for (i, c) in s.char_indices() {
+            if !c.is_numeric() {
+                end_index = i;
+                break;
+            }
+        }
+
+        let denom = s[start_index..end_index].parse::<u8>().unwrap();
+
+        // Read note name.
+        match s.get(end_index..).ok_or(())? {
+            "R" => Ok(Marking::Note(Note {
+                pitch: None,
+                duration: (1, denom),
+                articulation: None,
+            })),
+            a => {
+                let two = a.chars().collect::<Vec<char>>();
+                let letter_name = two[0];
+                let octave_num =
+                    str::parse::<i8>(&format!("{}", two[1])).unwrap();
+
+                Ok(Marking::Note(Note {
+                    pitch: Some((
+                        match letter_name {
+                            'A' => PitchClass {
+                                name: PitchName::A,
+                                accidental: None,
+                            },
+                            'B' => PitchClass {
+                                name: PitchName::B,
+                                accidental: None,
+                            },
+                            'C' => PitchClass {
+                                name: PitchName::C,
+                                accidental: None,
+                            },
+                            'D' => PitchClass {
+                                name: PitchName::D,
+                                accidental: None,
+                            },
+                            'E' => PitchClass {
+                                name: PitchName::E,
+                                accidental: None,
+                            },
+                            'F' => PitchClass {
+                                name: PitchName::F,
+                                accidental: None,
+                            },
+                            'G' => PitchClass {
+                                name: PitchName::G,
+                                accidental: None,
+                            },
+                            a => panic!("Failed to parse '{}'", a),
+                        },
+                        octave_num,
+                    )),
+                    duration: (1, denom),
+                    articulation: None,
+                }))
+            }
+        }
+    }
 }
 
 /// A repeat marking for a measure.
@@ -663,72 +736,7 @@ impl Scof {
     /// Get the marking at cursor
     pub fn marking(&self, cursor: &Cursor) -> Option<Marking> {
         let string = self.marking_str(0, cursor)?;
-
-        // Read duration.
-        let start_index = 0;
-        let mut end_index = 0;
-        for (i, c) in string.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
-            }
-        }
-
-        let denom = string[start_index..end_index].parse::<u8>().unwrap();
-
-        // Read note name.
-        match string.get(end_index..)? {
-            "R" => Some(Marking::Note(Note {
-                pitch: None,
-                duration: (1, denom),
-                articulation: None,
-            })),
-            a => {
-                let two = a.chars().collect::<Vec<char>>();
-                let letter_name = two[0];
-                let octave_num =
-                    str::parse::<i8>(&format!("{}", two[1])).unwrap();
-
-                Some(Marking::Note(Note {
-                    pitch: Some((
-                        match letter_name {
-                            'A' => PitchClass {
-                                name: PitchName::A,
-                                accidental: None,
-                            },
-                            'B' => PitchClass {
-                                name: PitchName::B,
-                                accidental: None,
-                            },
-                            'C' => PitchClass {
-                                name: PitchName::C,
-                                accidental: None,
-                            },
-                            'D' => PitchClass {
-                                name: PitchName::D,
-                                accidental: None,
-                            },
-                            'E' => PitchClass {
-                                name: PitchName::E,
-                                accidental: None,
-                            },
-                            'F' => PitchClass {
-                                name: PitchName::F,
-                                accidental: None,
-                            },
-                            'G' => PitchClass {
-                                name: PitchName::G,
-                                accidental: None,
-                            },
-                            a => panic!("Failed to parse '{}'", a),
-                        },
-                        octave_num,
-                    )),
-                    duration: (1, denom),
-                    articulation: None,
-                }))
-            }
-        }
+        string.parse::<Marking>().ok()
     }
 
     /// Set pitch class and octave.
