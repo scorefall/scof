@@ -404,10 +404,19 @@ pub struct Sig {
 }
 
 /// Channel information for a specific bar of music.
-#[derive(PartialEq, Debug, Default, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct Chan {
+    /// Notes for a channel
     notes: Vec<String>,
     lyric: Vec<String>,
+}
+
+impl Default for Chan {
+    fn default() -> Self {
+        let notes = vec!["1R".to_string()]; // whole Rest
+        let lyric = vec![];
+        Chan { notes, lyric }
+    }
 }
 
 /// A bar (or measure) of music.
@@ -595,25 +604,50 @@ impl Default for Scof {
 }
 
 impl Scof {
-    pub fn new_measure(&mut self) {
-        let last_bar = &self.movement[0].bar[self.movement[0].bar.len() - 1];
-        let mut chan = vec![];
+    /// Lookup a marking at a cursor position
+    fn marking_str(&self, movement: usize, cursor: &Cursor) -> Option<&String> {
+        self.movement.get(movement)?
+            .bar.get(cursor.measure)?
+            .chan.get(cursor.chan)?
+            .notes.get(cursor.marking)
+    }
 
-        // Add whole rests for each channel.
-        for _i in last_bar.chan.iter() {
-            chan.push(Chan {
-                notes: vec!["1R".to_string()], // Insert whole Rest
-                lyric: vec![],
+    /// Get mutable marking at a cursor position
+    fn marking_str_mut(&mut self, movement: usize, cursor: &Cursor)
+        -> Option<&mut String>
+    {
+        self.movement.get_mut(movement)?
+            .bar.get_mut(cursor.measure)?
+            .chan.get_mut(cursor.chan)?
+            .notes.get_mut(cursor.marking)
+    }
+
+    /// Get the last measure of a movement
+    fn last_measure(&self, movement: usize) -> Option<&Bar> {
+        Some(self.movement.get(movement)?.bar.last()?)
+    }
+
+    /// Push a measure at end of movement
+    fn push_measure(&mut self, movement: usize, bar: Bar) {
+        if let Some(movement) = &mut self.movement.get_mut(movement) {
+            movement.bar.push(bar);
+        }
+    }
+
+    /// Add a new measure
+    pub fn new_measure(&mut self) {
+        if let Some(last_bar) = self.last_measure(0) {
+            // Add whole rests for each channel.
+            let mut chan = vec![];
+            for _ in last_bar.chan.iter() {
+                chan.push(Chan::default());
+            }
+            self.push_measure(0, Bar {
+                sig: None,      // No signature changes
+                repeat: vec![], // No repeat symbols
+                chan,
             });
         }
-
-        let new_bar = Bar {
-            sig: None,      // No signature changes
-            repeat: vec![], // No repeat symbols
-            chan,
-        };
-
-        self.movement[0].bar.push(new_bar);
     }
 
     /// Get the count of markings in a measure
@@ -626,9 +660,9 @@ impl Scof {
         curs.marking
     }
 
+    /// Get the marking at cursor
     pub fn marking(&self, cursor: &Cursor) -> Option<Marking> {
-        let string = self.movement[0].bar.get(cursor.measure)?
-                .chan[cursor.chan].notes.get(cursor.marking)?;
+        let string = self.marking_str(0, cursor)?;
 
         // Read duration.
         let start_index = 0;
@@ -703,12 +737,9 @@ impl Scof {
         cursor: &Cursor,
         pitch: (PitchClass, i8),
     ) {
-        let string =
-            self.movement[0].bar.get(cursor.measure).unwrap().chan[cursor.chan]
-                .notes.get(cursor.marking).unwrap();
+        let string = self.marking_str(0, cursor).unwrap();
 
         // Read duration.
-        let start_index = 0;
         let mut end_index = 0;
         for (i, c) in string.char_indices() {
             if !c.is_numeric() {
@@ -734,7 +765,9 @@ impl Scof {
         string.push_str(class);
         string.push_str(&octave);
 
-        self.movement[0].bar[cursor.measure].chan[cursor.chan].notes[cursor.marking] = string;
+        if let Some(m) = self.marking_str_mut(0, cursor) {
+            *m = string;
+        }
     }
 }
 
