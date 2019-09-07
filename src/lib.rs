@@ -18,6 +18,49 @@
 use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
 
+/// Cursor pointing to a marking
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct Cursor {
+    /// Measure number at cursor
+    measure: usize,
+    /// Channel number at curosr
+    chan: usize,
+    /// Marking number within measure
+    marking: usize,
+}
+
+impl Cursor {
+    /// Create a new cursor
+    pub fn new(measure: usize, chan: usize, marking: usize) -> Self {
+        Cursor { measure, chan, marking }
+    }
+    /// Move cursor left.
+    pub fn left(&mut self, scof: &Scof) {
+        if self.marking > 0 {
+            self.marking -= 1;
+        } else if self.measure != 0 {
+            self.measure -= 1;
+            let len = scof.marking_len(self);
+            self.marking = if len > 0 { len - 1 } else { 0 };
+        }
+    }
+    /// Move cursor right.
+    pub fn right(&mut self, scof: &Scof) {
+        let len = scof.marking_len(self);
+        if self.marking + 1 < len {
+            self.marking += 1;
+        } else {
+            // Measure has ended.
+            self.measure += 1;
+            self.marking = 0;
+        }
+    }
+    /// Move cursor right.
+    pub fn right_unchecked(&mut self) {
+        self.marking += 1;
+    }
+}
+
 /// A Pitch Name.
 pub enum PitchName {
     C,
@@ -557,7 +600,7 @@ impl Scof {
         let mut chan = vec![];
 
         // Add whole rests for each channel.
-        for i in last_bar.chan.iter() {
+        for _i in last_bar.chan.iter() {
             chan.push(Chan {
                 notes: vec!["1R".to_string()], // Insert whole Rest
                 lyric: vec![],
@@ -573,14 +616,19 @@ impl Scof {
         self.movement[0].bar.push(new_bar);
     }
 
-    pub fn marking(
-        &self,
-        bar: usize,
-        chan: usize,
-        curs: usize,
-    ) -> Option<Marking> {
-        let string =
-            self.movement[0].bar.get(bar)?.chan[chan].notes.get(curs)?;
+    /// Get the count of markings in a measure
+    pub fn marking_len(&self, cursor: &Cursor) -> usize {
+        let mut curs = (*cursor).clone();
+        curs.marking = 0;
+        while self.marking(&curs).is_some() {
+            curs.marking += 1;
+        }
+        curs.marking
+    }
+
+    pub fn marking(&self, cursor: &Cursor) -> Option<Marking> {
+        let string = self.movement[0].bar.get(cursor.measure)?
+                .chan[cursor.chan].notes.get(cursor.marking)?;
 
         // Read duration.
         let start_index = 0;
@@ -652,13 +700,12 @@ impl Scof {
     /// Set pitch class and octave.
     pub fn set_pitch(
         &mut self,
-        bar: usize,
-        chan: usize,
-        curs: usize,
+        cursor: &Cursor,
         pitch: (PitchClass, i8),
     ) {
         let string =
-            self.movement[0].bar.get(bar).unwrap().chan[chan].notes.get(curs).unwrap();
+            self.movement[0].bar.get(cursor.measure).unwrap().chan[cursor.chan]
+                .notes.get(cursor.marking).unwrap();
 
         // Read duration.
         let start_index = 0;
@@ -687,7 +734,7 @@ impl Scof {
         string.push_str(class);
         string.push_str(&octave);
 
-        self.movement[0].bar[bar].chan[chan].notes[curs] = string;
+        self.movement[0].bar[cursor.measure].chan[cursor.chan].notes[cursor.marking] = string;
     }
 }
 
