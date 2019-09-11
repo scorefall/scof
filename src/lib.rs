@@ -40,6 +40,10 @@ impl Cursor {
     pub fn new(measure: usize, chan: usize, marking: usize) -> Self {
         Cursor { measure, chan, marking }
     }
+    /// Create a cursor from the first marking
+    pub fn first_marking(&self) -> Self {
+        Cursor { measure: self.measure, chan: self.chan, marking: 0 }
+    }
     /// Move cursor left.
     pub fn left(&mut self, scof: &Scof) {
         if self.marking > 0 {
