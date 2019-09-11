@@ -18,6 +18,11 @@
 use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::string::ToString;
+
+mod fraction;
+
+pub use fraction::{Fraction, IsZero};
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -57,8 +62,9 @@ impl Cursor {
         }
     }
     /// Move cursor right.
-    pub fn right_unchecked(&mut self) {
+    pub fn right_unchecked(&mut self) -> Self {
         self.marking += 1;
+        self.clone()
     }
 }
 
@@ -189,9 +195,42 @@ pub struct Note {
     /// Pitch & Octave
     pub pitch: Option<(PitchClass, i8)>,
     /// Duration of the note as a fraction.
-    pub duration: (u8, u8),
+    pub duration: Fraction,
     /// Articulation.
     pub articulation: Option<Articulation>,
+}
+
+impl ToString for Note {
+    fn to_string(&self) -> String {
+        let mut output = String::new();
+
+        // Write duration.
+        if self.duration.num != 1 {
+            output.push_str(&format!("{}/", self.duration.num));
+        }
+        output.push_str(&format!("{}", self.duration.den));
+
+        // Write note name & octave.
+        let name = if let Some(pitch) = &self.pitch {
+            let class = match pitch.0.name {
+                PitchName::A => "A",
+                PitchName::B => "B",
+                PitchName::C => "C",
+                PitchName::D => "D",
+                PitchName::E => "E",
+                PitchName::F => "F",
+                PitchName::G => "G",
+            };
+            format!("{}{}", class, pitch.1)
+        } else {
+            // Rest
+            "R".to_string()
+        };
+
+        output.push_str(&name);
+
+        output
+    }
 }
 
 impl FromStr for Note {
@@ -207,13 +246,37 @@ impl FromStr for Note {
                 break;
             }
         }
-        let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
+
+        // Read rest of duration.
+        let (numer, denom) = if s[end_index..].chars().next() == Some('/') {
+            let numer = s[start_index..end_index].parse::<u8>().or(Err(()))?;
+
+            end_index += 1;
+
+            let start_index = end_index;
+
+            for (i, c) in s[start_index..].char_indices() {
+                if !c.is_numeric() {
+                    end_index = i;
+                    break;
+                }
+            }
+
+            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
+
+            (numer, denom)
+        } else {
+            let numer = 1;
+            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
+
+            (numer, denom)
+        };
 
         // Read note name.
         match s.get(end_index..).ok_or(())? {
             "R" => Ok(Note {
                 pitch: None,
-                duration: (1, denom),
+                duration: Fraction::new(1, denom),
                 articulation: None,
             }),
             a => {
@@ -258,7 +321,7 @@ impl FromStr for Note {
                         },
                         octave_num,
                     )),
-                    duration: (1, denom),
+                    duration: Fraction::new(1, denom),
                     articulation: None,
                 })
             }
@@ -300,15 +363,15 @@ impl Note {
         }
     }
 
-/*    /// Calculate note one quarter step up.
+    /// Calculate note one quarter step up.
     pub fn quarter_step_up(&self, create: (PitchClass, i8)) -> Note {
-        
+        self.step_up(create) // FIXME
     }
 
     /// Calculate note one quarter step down.
     pub fn quarter_step_down(&self, create: (PitchClass, i8)) -> Note {
-        
-    }*/
+        self.step_down(create) // FIXME
+    }
 
     /// Calculate note one half step up.
     pub fn half_step_up(&self, create: (PitchClass, i8)) -> Note {
@@ -693,14 +756,22 @@ impl Scof {
             .notes.get(cursor.marking)
     }
 
+    /// Get mutable vec of notes for measure at cursor position.
+    fn chan_notes_mut(&mut self, movement: usize, cursor: &Cursor)
+        -> Option<&mut Vec<String>>
+    {
+        Some(&mut self.movement.get_mut(movement)?
+            .bar.get_mut(cursor.measure)?
+            .chan.get_mut(cursor.chan)?
+            .notes)
+    }
+
     /// Get mutable marking at a cursor position
     fn marking_str_mut(&mut self, movement: usize, cursor: &Cursor)
         -> Option<&mut String>
     {
-        self.movement.get_mut(movement)?
-            .bar.get_mut(cursor.measure)?
-            .chan.get_mut(cursor.chan)?
-            .notes.get_mut(cursor.marking)
+        self.chan_notes_mut(movement, cursor)?
+            .get_mut(cursor.marking)
     }
 
     /// Get the last measure of a movement
@@ -747,6 +818,21 @@ impl Scof {
         string.parse::<Marking>().ok()
     }
 
+    /// Insert a note after the cursor.
+    pub fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
+        let string = self.chan_notes_mut(0, &cursor.clone().right_unchecked())?
+            .insert(cursor.marking + 1, marking.to_string());
+        Some(())
+    }
+
+    /// Remove the note after the cursor.
+    pub fn remove_after(&mut self, cursor: &Cursor) -> Option<Note> {
+        let string = self.chan_notes_mut(0, &cursor.clone().right_unchecked())?
+            .remove(cursor.marking);
+
+        string.parse::<Note>().ok()
+    }
+
     /// Set pitch class and octave.
     pub fn set_pitch(
         &mut self,
@@ -761,6 +847,18 @@ impl Scof {
             if !c.is_numeric() {
                 end_index = i;
                 break;
+            }
+        }
+
+        // Read rest of duration.
+        if string[end_index..].chars().next() == Some('/') {
+            end_index += 1;
+
+            for (i, c) in string[end_index..].char_indices() {
+                if !c.is_numeric() {
+                    end_index = i;
+                    break;
+                }
             }
         }
 
@@ -785,6 +883,45 @@ impl Scof {
             *m = string;
         }
     }
+
+    /// Set duration of a note.
+    pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
+        let string = self.marking_str(0, cursor).unwrap();
+
+        // Read duration.
+        let mut end_index = 0;
+        for (i, c) in string.char_indices() {
+            if !c.is_numeric() {
+                end_index = i;
+                break;
+            }
+        }
+
+        // Read rest of duration.
+        if string[end_index..].chars().next() == Some('/') {
+            end_index += 1;
+
+            for (i, c) in string[end_index..].char_indices() {
+                if !c.is_numeric() {
+                    end_index = i;
+                    break;
+                }
+            }
+        }
+
+        let string = string[end_index..].to_string();
+        let mut output = String::new();
+
+        if dur.num != 1 {
+            output.push_str(&format!("{}/", dur.num));
+        }
+        output.push_str(&format!("{}", dur.den));
+        output.push_str(&string);
+
+        if let Some(m) = self.marking_str_mut(0, cursor) {
+            *m = output;
+        }
+    }
 }
 
 /*impl<R> From<R> for Scof where R: std::io::Read {
@@ -796,11 +933,3 @@ impl Scof {
         rtn
     }
 }*/
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
