@@ -17,8 +17,8 @@
 
 use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
+use std::fmt;
 use std::str::FromStr;
-use std::string::ToString;
 
 mod fraction;
 
@@ -204,36 +204,30 @@ pub struct Note {
     pub articulation: Option<Articulation>,
 }
 
-impl ToString for Note {
-    fn to_string(&self) -> String {
-        let mut output = String::new();
-
+impl fmt::Display for Note {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Write duration.
         if self.duration.num != 1 {
-            output.push_str(&format!("{}/", self.duration.num));
+            write!(f, "{}/", self.duration.num)?;
         }
-        output.push_str(&format!("{}", self.duration.den));
+        write!(f, "{}", self.duration.den)?;
 
         // Write note name & octave.
-        let name = if let Some(pitch) = &self.pitch {
-            let class = match pitch.0.name {
-                PitchName::A => "A",
-                PitchName::B => "B",
-                PitchName::C => "C",
-                PitchName::D => "D",
-                PitchName::E => "E",
-                PitchName::F => "F",
-                PitchName::G => "G",
-            };
-            format!("{}{}", class, pitch.1)
-        } else {
-            // Rest
-            "R".to_string()
-        };
-
-        output.push_str(&name);
-
-        output
+        match &self.pitch {
+            Some(pitch) => {
+                let class = match pitch.0.name {
+                    PitchName::A => "A",
+                    PitchName::B => "B",
+                    PitchName::C => "C",
+                    PitchName::D => "D",
+                    PitchName::E => "E",
+                    PitchName::F => "F",
+                    PitchName::G => "G",
+                };
+                write!(f, "{}{}", class, pitch.1)
+            },
+            None => write!(f, "R"),
+        }
     }
 }
 
@@ -252,7 +246,7 @@ impl FromStr for Note {
         }
 
         // Read rest of duration.
-        let (numer, denom) = if s[end_index..].chars().next() == Some('/') {
+        let duration = if s[end_index..].chars().next() == Some('/') {
             let numer = s[start_index..end_index].parse::<u8>().or(Err(()))?;
 
             end_index += 1;
@@ -268,19 +262,19 @@ impl FromStr for Note {
 
             let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
 
-            (numer, denom)
+            Fraction::new(numer, denom)
         } else {
             let numer = 1;
             let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
 
-            (numer, denom)
+            Fraction::new(numer, denom)
         };
 
         // Read note name.
         match s.get(end_index..).ok_or(())? {
             "R" => Ok(Note {
                 pitch: None,
-                duration: Fraction::new(1, denom),
+                duration,
                 articulation: None,
             }),
             a => {
@@ -325,7 +319,7 @@ impl FromStr for Note {
                         },
                         octave_num,
                     )),
-                    duration: Fraction::new(1, denom),
+                    duration,
                     articulation: None,
                 })
             }
@@ -351,6 +345,16 @@ impl Note {
         } else {
             0
         }
+    }
+
+    /// Set pitch class and octave.
+    pub fn set_pitch(&mut self, pitch: (PitchClass, i8)) {
+        self.pitch = Some(pitch);
+    }
+
+    /// Set duration of note.
+    pub fn set_duration(&mut self, duration: Fraction) {
+        self.duration = duration;
     }
 
     fn move_step(&self, create: (PitchClass, i8), run: &dyn Fn(&(PitchClass, i8)) -> Option<(PitchClass, i8)>) -> Note {
@@ -822,6 +826,12 @@ impl Scof {
         string.parse::<Marking>().ok()
     }
 
+    /// Get the note at cursor
+    pub fn note(&self, cursor: &Cursor) -> Option<Note> {
+        let string = self.marking_str(0, cursor)?;
+        string.parse::<Note>().ok()
+    }
+
     /// Insert a note after the cursor.
     pub fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
         let string = self.chan_notes_mut(0, &cursor.clone().right_unchecked())?
@@ -837,94 +847,20 @@ impl Scof {
         string.parse::<Note>().ok()
     }
 
-    /// Set pitch class and octave.
-    pub fn set_pitch(
-        &mut self,
-        cursor: &Cursor,
-        pitch: (PitchClass, i8),
-    ) {
-        let string = self.marking_str(0, cursor).unwrap();
-
-        // Read duration.
-        let mut end_index = 0;
-        for (i, c) in string.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
-            }
-        }
-
-        // Read rest of duration.
-        if string[end_index..].chars().next() == Some('/') {
-            end_index += 1;
-
-            for (i, c) in string[end_index..].char_indices() {
-                if !c.is_numeric() {
-                    end_index = i;
-                    break;
-                }
-            }
-        }
-
-        let mut string = string[..end_index].to_string();
-
-        // Read note name.
-        let class = match pitch.0.name {
-            PitchName::A => "A",
-            PitchName::B => "B",
-            PitchName::C => "C",
-            PitchName::D => "D",
-            PitchName::E => "E",
-            PitchName::F => "F",
-            PitchName::G => "G",
-        };
-        let octave = format!("{}", pitch.1);
-
-        string.push_str(class);
-        string.push_str(&octave);
-
-        if let Some(m) = self.marking_str_mut(0, cursor) {
-            *m = string;
-        }
+    /// Set pitch class and octave of a note at a cursor
+    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, i8)) {
+        let mut note = self.note(cursor).unwrap();
+        note.set_pitch(pitch);
+        let m = self.marking_str_mut(0, cursor).unwrap();
+        *m = note.to_string();
     }
 
     /// Set duration of a note.
     pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
-        let string = self.marking_str(0, cursor).unwrap();
-
-        // Read duration.
-        let mut end_index = 0;
-        for (i, c) in string.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
-            }
-        }
-
-        // Read rest of duration.
-        if string[end_index..].chars().next() == Some('/') {
-            end_index += 1;
-
-            for (i, c) in string[end_index..].char_indices() {
-                if !c.is_numeric() {
-                    end_index = i;
-                    break;
-                }
-            }
-        }
-
-        let string = string[end_index..].to_string();
-        let mut output = String::new();
-
-        if dur.num != 1 {
-            output.push_str(&format!("{}/", dur.num));
-        }
-        output.push_str(&format!("{}", dur.den));
-        output.push_str(&string);
-
-        if let Some(m) = self.marking_str_mut(0, cursor) {
-            *m = output;
-        }
+        let mut note = self.note(cursor).unwrap();
+        note.set_duration(dur);
+        let m = self.marking_str_mut(0, cursor).unwrap();
+        *m = note.to_string();
     }
 }
 
