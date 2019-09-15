@@ -72,6 +72,10 @@ impl Cursor {
         self.marking += 1;
         self.clone()
     }
+    /// Returns true if it's the first bar of music.
+    pub fn is_first_bar(&self) -> bool {
+        self.measure == 0
+    }
 }
 
 /// A Dynamic.
@@ -532,13 +536,3 @@ impl Scof {
         *m = note.to_string();
     }
 }
-
-/*impl<R> From<R> for Scof where R: std::io::Read {
-    fn from(a: R) -> Self {
-        let mut rtn = Self::default();
-
-//        let _ = muon::from_reader(a);
-
-        rtn
-    }
-}*/
