@@ -60,9 +60,11 @@ use crate::Fraction;
 
 mod articulation;
 mod pitch;
+mod duration;
 
 pub use self::articulation::*;
 pub use self::pitch::*;
+pub use self::duration::*;
 
 /// A note.
 pub struct Note {
