@@ -20,9 +20,11 @@ use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
+pub mod note;
 mod fraction;
 
 pub use fraction::{Fraction, IsZero};
+pub use note::{Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave};
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -72,46 +74,6 @@ impl Cursor {
     }
 }
 
-/// A Pitch Name.
-pub enum PitchName {
-    C,
-    D,
-    E,
-    F,
-    G,
-    A,
-    B,
-}
-
-/// A Pitch Accidental.
-#[derive(Copy, Clone)]
-pub enum PitchAccidental {
-    ///
-    DoubleFlat,
-    ///
-    FlatQuarterFlat,
-    ///
-    Flat,
-    ///
-    QuarterFlat,
-    ///
-    Natural,
-    ///
-    QuarterSharp,
-    ///
-    Sharp,
-    ///
-    SharpQuarterSharp,
-    ///
-    DoubleSharp,
-}
-
-/// A Pitch Class
-pub struct PitchClass {
-    pub name: PitchName,
-    pub accidental: Option<PitchAccidental>,
-}
-
 /// A Dynamic.
 pub enum Dynamic {
     PPPPPP,
@@ -133,307 +95,6 @@ pub enum Dynamic {
     SFZ,
     FP,
     SFP,
-}
-
-/// An articulation (affects how the note is played).
-#[derive(Copy, Clone)]
-pub enum Articulation {
-    /// Really separated.
-    Staccatissimo,
-    /// Separated (short 1/2)
-    Staccato,
-    /// Tenuto
-    Tenuto,
-    /// Tenuto Staccato
-    TenutoStaccato,
-    /// Marcato (short sharp attack) (2/3)
-    Marcato,
-    /// Marcato Staccato
-    MarcatoStaccato,
-    /// Marcato Tenuto
-    MarcatoTenuto,
-    /// Accent (sharp attack)
-    Accent,
-    /// Accent Staccato
-    AccentStaccato,
-    /// Accent Tenuto
-    AccentTenuto,
-    /// Slur
-    Slur,
-    /// Glissando
-    Glissando,
-    /// Pitch bend slide up into
-    BendUpInto,
-    /// Pitch bend slide down into
-    BendDownInto,
-    /// Pitch bend slide up out of
-    BendUpOut,
-    /// Pitch bend slide down out of (fall)
-    BendDownOut,
-    /// Fermata (everyone plays long)
-    Fermata,
-    /// Closed mute (or palm mute rendered as _ on guitar)
-    Mute,
-    /// Open (no) Mute
-    Open,
-    /// Harmonic
-    Harmonic,
-    /// Turn
-    Turn,
-    /// Inverted Turn
-    TurnInverted,
-    /// Trill
-    Trill,
-    /// Tremelo
-    Tremelo,
-    /// Arpeggio (strum) pitch up, strum guitar down.
-    StrumDown,
-    /// Arpeggio (strum) pitch down, strum guitar up
-    StrumUp,
-    /// Pedal
-    Pedal,
-}
-
-/// A note.
-pub struct Note {
-    /// Pitch & Octave
-    pub pitch: Option<(PitchClass, i8)>,
-    /// Duration of the note as a fraction.
-    pub duration: Fraction,
-    /// Articulation.
-    pub articulation: Option<Articulation>,
-}
-
-impl fmt::Display for Note {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Write duration.
-        if self.duration.num != 1 {
-            write!(f, "{}/", self.duration.num)?;
-        }
-        write!(f, "{}", self.duration.den)?;
-
-        // Write note name & octave.
-        match &self.pitch {
-            Some(pitch) => {
-                let class = match pitch.0.name {
-                    PitchName::A => "A",
-                    PitchName::B => "B",
-                    PitchName::C => "C",
-                    PitchName::D => "D",
-                    PitchName::E => "E",
-                    PitchName::F => "F",
-                    PitchName::G => "G",
-                };
-                write!(f, "{}{}", class, pitch.1)
-            },
-            None => write!(f, "R"),
-        }
-    }
-}
-
-impl FromStr for Note {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Read duration.
-        let start_index = 0;
-        let mut end_index = 0;
-        for (i, c) in s.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
-            }
-        }
-
-        // Read rest of duration.
-        let duration = if s[end_index..].chars().next() == Some('/') {
-            let numer = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            end_index += 1;
-
-            let start_index = end_index;
-
-            for (i, c) in s[start_index..].char_indices() {
-                if !c.is_numeric() {
-                    end_index = i;
-                    break;
-                }
-            }
-
-            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            Fraction::new(numer, denom)
-        } else {
-            let numer = 1;
-            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            Fraction::new(numer, denom)
-        };
-
-        // Read note name.
-        match s.get(end_index..).ok_or(())? {
-            "R" => Ok(Note {
-                pitch: None,
-                duration,
-                articulation: None,
-            }),
-            a => {
-                let two = a.chars().collect::<Vec<char>>();
-                let letter_name = two[0];
-                let octave_num = str::parse::<i8>(&format!("{}", two[1]))
-                    .or(Err(()))?;
-
-                Ok(Note {
-                    pitch: Some((
-                        match letter_name {
-                            'A' => PitchClass {
-                                name: PitchName::A,
-                                accidental: None,
-                            },
-                            'B' => PitchClass {
-                                name: PitchName::B,
-                                accidental: None,
-                            },
-                            'C' => PitchClass {
-                                name: PitchName::C,
-                                accidental: None,
-                            },
-                            'D' => PitchClass {
-                                name: PitchName::D,
-                                accidental: None,
-                            },
-                            'E' => PitchClass {
-                                name: PitchName::E,
-                                accidental: None,
-                            },
-                            'F' => PitchClass {
-                                name: PitchName::F,
-                                accidental: None,
-                            },
-                            'G' => PitchClass {
-                                name: PitchName::G,
-                                accidental: None,
-                            },
-                            // FIXME: return Err
-                            a => panic!("Failed to parse '{}'", a),
-                        },
-                        octave_num,
-                    )),
-                    duration,
-                    articulation: None,
-                })
-            }
-        }
-    }
-}
-
-impl Note {
-    /// Get the note's visual distance from middle C (C4).
-    pub fn visual_distance(&self) -> i32 {
-        if let Some(ref pitch) = self.pitch {
-            let octave_offset = -7 * (pitch.1 as i32 - 4);
-            octave_offset
-                - match pitch.0.name {
-                    PitchName::C => 0,
-                    PitchName::D => 1,
-                    PitchName::E => 2,
-                    PitchName::F => 3,
-                    PitchName::G => 4,
-                    PitchName::A => 5,
-                    PitchName::B => 6,
-                }
-        } else {
-            0
-        }
-    }
-
-    /// Set pitch class and octave.
-    pub fn set_pitch(&mut self, pitch: (PitchClass, i8)) {
-        self.pitch = Some(pitch);
-    }
-
-    /// Set duration of note.
-    pub fn set_duration(&mut self, duration: Fraction) {
-        self.duration = duration;
-    }
-
-    fn move_step(&self, create: (PitchClass, i8), run: &dyn Fn(&(PitchClass, i8)) -> Option<(PitchClass, i8)>) -> Note {
-        let pitch = if let Some(ref pitch) = self.pitch {
-            (run)(pitch)
-        } else {
-            Some(create)
-        };
-
-        Note {
-            pitch,
-            duration: self.duration,
-            articulation: self.articulation,
-        }
-    }
-
-    /// Calculate note one quarter step up.
-    pub fn quarter_step_up(&self, create: (PitchClass, i8)) -> Note {
-        self.step_up(create) // FIXME
-    }
-
-    /// Calculate note one quarter step down.
-    pub fn quarter_step_down(&self, create: (PitchClass, i8)) -> Note {
-        self.step_down(create) // FIXME
-    }
-
-    /// Calculate note one half step up.
-    pub fn half_step_up(&self, create: (PitchClass, i8)) -> Note {
-        self.step_up(create) // FIXME
-    }
-
-    /// Calculate note one half step down.
-    pub fn half_step_down(&self, create: (PitchClass, i8)) -> Note {
-        self.step_down(create) // FIXME
-    }
-
-    /// Calculate note one step up within the key.
-    /// - `create`: Note that is generated from a rest.
-    pub fn step_up(&self, create: (PitchClass, i8)) -> Note {
-        self.move_step(create, &|pitch| {
-            let (pitch_class, offset) = match pitch.0.name {
-                PitchName::A => (PitchName::B, 0),
-                PitchName::B => (PitchName::C, 1),
-                PitchName::C => (PitchName::D, 0),
-                PitchName::D => (PitchName::E, 0),
-                PitchName::E => (PitchName::F, 0),
-                PitchName::F => (PitchName::G, 0),
-                PitchName::G => (PitchName::A, 0),
-            };
-            let pitch_octave = pitch.1 + offset;
-
-            Some((PitchClass {
-                name: pitch_class,
-                accidental: pitch.0.accidental,
-            }, pitch_octave))            
-        })
-    }
-
-    /// Calculate note one step down within the key.
-    /// - `create`: Note that is generated from a rest.
-    pub fn step_down(&self, create: (PitchClass, i8)) -> Note {
-        self.move_step(create, &|pitch| {
-            let (pitch_class, offset) = match pitch.0.name {
-                PitchName::A => (PitchName::G, 0),
-                PitchName::B => (PitchName::A, 0),
-                PitchName::C => (PitchName::B, -1),
-                PitchName::D => (PitchName::C, 0),
-                PitchName::E => (PitchName::D, 0),
-                PitchName::F => (PitchName::E, 0),
-                PitchName::G => (PitchName::F, 0),
-            };
-            let pitch_octave = pitch.1 + offset;
-
-            Some((PitchClass {
-                name: pitch_class,
-                accidental: pitch.0.accidental,
-            }, pitch_octave))            
-        })
-    }
 }
 
 /// A marking.
@@ -565,7 +226,7 @@ pub struct Chan {
 
 impl Default for Chan {
     fn default() -> Self {
-        let notes = vec!["1R".to_string()]; // whole Rest
+        let notes = vec!["R".to_string()]; // whole measure rest
         let lyric = vec![];
         Chan { notes, lyric }
     }
@@ -848,7 +509,7 @@ impl Scof {
     }
 
     /// Set pitch class and octave of a note at a cursor
-    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, i8)) {
+    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, PitchOctave)) {
         let mut note = self.note(cursor).unwrap();
         note.set_pitch(pitch);
         let m = self.marking_str_mut(0, cursor).unwrap();
