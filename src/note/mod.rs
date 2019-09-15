@@ -19,16 +19,14 @@
 //! 
 //! **note name**: Required name of the note.  A-G, or R for rest.
 //! 
-//! ```
-//! A
-//! B
-//! C
-//! D
-//! E
-//! F
-//! G
-//! R
-//! ```
+//! - `A`
+//! - `B`
+//! - `C`
+//! - `D`
+//! - `E`
+//! - `F`
+//! - `G`
+//! - `R`
 //! 
 //! **accidental**: Optional accidental.  If not provided, from key signature.  Cannot be same as what is in the key signature.
 //! 
