@@ -3,7 +3,8 @@
 //! 
 //! ## Structure
 //! 
-//! **note length**: Required number for note duration 8=eighth note.
+//! **note length**: Almost always required number for note duration.  If it is
+//! not provided, then next must be R for a whole measure rest.
 //! 
 //! - O: 128th note
 //! - X: 64th note
@@ -71,7 +72,7 @@ pub struct Note {
     /// Pitch & Octave
     pub pitch: Option<(PitchClass, PitchOctave)>,
     /// Duration of the note as a fraction.
-    pub duration: Fraction,
+    pub duration: Vec<Duration>,
     /// Articulation.
     pub articulation: Vec<Articulation>,
 }
@@ -79,10 +80,9 @@ pub struct Note {
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Write duration.
-        if self.duration.num != 1 {
-            write!(f, "{}/", self.duration.num)?;
+        for duration in &self.duration {
+            write!(f, "{}", duration)?;
         }
-        write!(f, "{}", self.duration.den)?;
 
         // Write note name & octave.
         match &self.pitch {
@@ -108,7 +108,23 @@ impl FromStr for Note {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Read duration.
-        let start_index = 0;
+        let mut end_index = std::usize::MAX;
+        for (i, c) in s.char_indices() {
+            match c {
+                'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'R' => {
+                    end_index = i;
+                    break;
+                }
+                _ => {}
+            }
+        }
+        let duration = if end_index == 0 {
+            vec![]
+        } else {
+            s[..end_index].parse::<Duration2>().or(Err(()))?.0
+        };
+
+        /*let start_index = 0;
         let mut end_index = 0;
         for (i, c) in s.char_indices() {
             if !c.is_numeric() {
@@ -140,7 +156,9 @@ impl FromStr for Note {
             let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
 
             Fraction::new(numer, denom)
-        };
+        };*/
+
+
         let articulation = vec![];
 
         // Read note name.
@@ -244,8 +262,18 @@ impl Note {
     }
 
     /// Set duration of note.
-    pub fn set_duration(&mut self, duration: Fraction) {
+    pub fn set_duration(&mut self, duration: Vec<Duration>) {
         self.duration = duration;
+    }
+
+    /// Set duration of note (indexed).
+    pub fn set_duration_indexed(&mut self, duration: Duration, index: usize) {
+        self.duration[index] = duration;
+    }
+
+    /// Get the fraction of the note.
+    pub fn fraction(&self, index: usize) -> Option<Fraction> {
+        Some(self.duration.get(index)?.fraction())
     }
 
     fn move_step(&self, create: (PitchClass, PitchOctave), run: &dyn Fn(&(PitchClass, PitchOctave)) -> Option<(PitchClass, PitchOctave)>) -> Note {
@@ -257,7 +285,7 @@ impl Note {
 
         Note {
             pitch,
-            duration: self.duration,
+            duration: self.duration.clone(),
             articulation: self.articulation.clone(),
         }
     }

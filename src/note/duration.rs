@@ -9,12 +9,17 @@
 //! least in 4/4).
 //!
 //! For a 5/4 time signature, write 6:5 for a sextuplet.
+//! For no tuple, 1:1.
+
+use std::{fmt, str::FromStr};
+use crate::Fraction;
 
 /// A duration of a note.
 /// - Tuplet Numerator
 /// - Tuplet Denomerator
 /// - Augmentation
 #[repr(u8)]
+#[derive(Copy, Clone)]
 pub enum Duration {
     /// No augmentation allowed
     Den128(u8, u8),
@@ -73,5 +78,88 @@ impl Duration {
             Num2(n, d, a) => Num2(n, d, 0),
             Num4(n, d) => Num4(n, d),
         }
+    }
+
+    /// Convert duration into fraction of a quarter note.
+    pub fn fraction(&self) -> Fraction {
+        use Duration::*;
+
+        match *self {
+            Den128(n, d) => Fraction::new(1, 128) * Fraction::new(d, n),
+            Den64(n, d, a) => Fraction::new(1, 64) * Fraction::new(d, n),
+            Den32(n, d, a) => Fraction::new(1, 32) * Fraction::new(d, n),
+            Den16(n, d, a) => Fraction::new(1, 16) * Fraction::new(d, n),
+            Den8(n, d, a) => Fraction::new(1, 8) * Fraction::new(d, n),
+            Den4(n, d, a) => Fraction::new(1, 4) * Fraction::new(d, n),
+            Den2(n, d, a) => Fraction::new(1, 2) * Fraction::new(d, n),
+            Num1(n, d, a) => Fraction::new(1, 1) * Fraction::new(d, n),
+            Num2(n, d, a) => Fraction::new(2, 1) * Fraction::new(d, n),
+            Num4(n, d) => Fraction::new(4, 1) * Fraction::new(d, n),
+        }
+    }
+}
+
+impl fmt::Display for Duration {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Duration::*;
+
+        fn augment(f: &mut fmt::Formatter, c: char, a: u8) -> fmt::Result {
+            write!(f, "{}", c)?;
+            for i in 0..a {
+                write!(f, ".")?;
+            }
+            Ok(())
+        }
+
+        match *self {
+            Den128(n, d) => write!(f, "O"),
+            Den64(n, d, a) => augment(f, 'X', a),
+            Den32(n, d, a) => augment(f, 'Y', a),
+            Den16(n, d, a) => augment(f, 'S', a),
+            Den8(n, d, a) => augment(f, 'T', a),
+            Den4(n, d, a) => augment(f, 'Q', a),
+            Den2(n, d, a) => augment(f, 'U', a),
+            Num1(n, d, a) => augment(f, 'W', a),
+            Num2(n, d, a) => augment(f, 'V', a),
+            Num4(n, d) => write!(f, "L"),
+        }
+    }
+}
+
+pub(super) struct Duration2(pub(super) Vec<Duration>);
+
+impl FromStr for Duration2 {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut end_index = 0;
+        let mut iter = s.chars();
+        let mut out = vec![];
+
+        for c in iter {
+            match c {
+                'O' => out.push(Duration::Den128(1, 1)),
+                'X' => out.push(Duration::Den64(1, 1, 0)),
+                'Y' => out.push(Duration::Den32(1, 1, 0)),
+                'S' => out.push(Duration::Den16(1, 1, 0)),
+                'T' => out.push(Duration::Den8(1, 1, 0)),
+                'Q' => out.push(Duration::Den4(1, 1, 0)),
+                'U' => out.push(Duration::Den2(1, 1, 0)),
+                'W' => out.push(Duration::Num1(1, 1, 0)),
+                'V' => out.push(Duration::Num2(1, 1, 0)),
+                'L' => out.push(Duration::Num4(1, 1)),
+                '.' => {
+                    if let Some(mut dur) = out.pop() {
+                        dur.augment(); // TODO: make fail, if can't augment.
+                        out.push(dur);
+                    } else {
+                        return Err(());
+                    }
+                }
+                _ => return Err(())
+            }
+        };
+
+        Ok(Duration2(out))
     }
 }

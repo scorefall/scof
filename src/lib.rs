@@ -24,7 +24,7 @@ pub mod note;
 mod fraction;
 
 pub use fraction::{Fraction, IsZero};
-pub use note::{Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave};
+pub use note::{Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave, Duration};
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -517,9 +517,17 @@ impl Scof {
     }
 
     /// Set duration of a note.
-    pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
+    pub fn set_duration(&mut self, cursor: &Cursor, dur: Vec<Duration>) {
         let mut note = self.note(cursor).unwrap();
         note.set_duration(dur);
+        let m = self.marking_str_mut(0, cursor).unwrap();
+        *m = note.to_string();
+    }
+
+    /// Set duration of index within tied notes.
+    pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index: usize) {
+        let mut note = self.note(cursor).unwrap();
+        note.set_duration_indexed(dur, index);
         let m = self.marking_str_mut(0, cursor).unwrap();
         *m = note.to_string();
     }
