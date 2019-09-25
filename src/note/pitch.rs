@@ -1,15 +1,49 @@
 use std::fmt;
+use std::str::FromStr;
 
 /// A Pitch Name.
 #[derive(Copy, Clone)]
 pub enum PitchName {
-    C,
-    D,
-    E,
-    F,
-    G,
-    A,
-    B,
+    C = 0,
+    D = 1,
+    E = 2,
+    F = 3,
+    G = 4,
+    A = 5,
+    B = 6,
+}
+
+impl fmt::Display for PitchName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use PitchName::*;
+
+        match self {
+            C => write!(f, "C"),
+            D => write!(f, "D"),
+            E => write!(f, "E"),
+            F => write!(f, "F"),
+            G => write!(f, "G"),
+            A => write!(f, "A"),
+            B => write!(f, "B"),
+        }
+    }
+}
+
+impl FromStr for PitchName {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "C" => PitchName::C,
+            "D" => PitchName::D,
+            "E" => PitchName::E,
+            "F" => PitchName::F,
+            "G" => PitchName::G,
+            "A" => PitchName::A,
+            "B" => PitchName::B,
+            _ => panic!("BAD STRINGGGG: {}", s), // return Err(())
+        })
+    }
 }
 
 /// A Pitch Accidental.
@@ -35,11 +69,78 @@ pub enum PitchAccidental {
     DoubleSharp,
 }
 
+impl fmt::Display for PitchAccidental {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use PitchAccidental::*;
+
+        match self {
+            DoubleFlat => write!(f, "bb"),
+            FlatQuarterFlat => write!(f, "db"),
+            Flat => write!(f, "b"),
+            QuarterFlat => write!(f, "d"),
+            Natural => write!(f, "n"),
+            QuarterSharp => write!(f, "t"),
+            Sharp => write!(f, "#"),
+            SharpQuarterSharp => write!(f, "t#"),
+            DoubleSharp => write!(f, "x"),
+        }
+    }
+}
+
+impl FromStr for PitchAccidental {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "bb" => PitchAccidental::DoubleFlat,
+            "db" => PitchAccidental::FlatQuarterFlat,
+            "b" => PitchAccidental::Flat,
+            "d" => PitchAccidental::QuarterFlat,
+            "n" => PitchAccidental::Natural,
+            "t" => PitchAccidental::QuarterSharp,
+            "#" => PitchAccidental::Sharp,
+            "t#" => PitchAccidental::SharpQuarterSharp,
+            "x" => PitchAccidental::DoubleSharp,
+            _ => return Err(())
+        })
+    }
+}
+
 /// A Pitch Class
 #[derive(Copy, Clone)]
 pub struct PitchClass {
     pub name: PitchName,
     pub accidental: Option<PitchAccidental>,
+}
+
+impl fmt::Display for PitchClass {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}", self.name)?;
+        if let Some(ref accidental) = self.accidental {
+            write!(f, "{}", accidental)?;
+        }
+        Ok(())
+    }
+}
+
+impl FromStr for PitchClass {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+/*        if s.is_empty() {
+            Err(())
+        } else if s.len() == 1 {*/
+            Ok(PitchClass {
+                name: s.parse()?,
+                accidental: None,
+            })
+/*        } else {
+            Ok(PitchClass {
+                name: PitchName::from_str(s.get(..1).ok_or(())?)?,
+                accidental: Some(PitchAccidental::from_str(s.get(1..).ok_or(())?)?),
+            })
+        }*/
+    }
 }
 
 /// A Pitch Octave
@@ -127,5 +228,26 @@ impl fmt::Display for PitchOctave {
             Octave8 => write!(f, "8"),
             Octave9 => write!(f, "9"),
         }
+    }
+}
+
+impl FromStr for PitchOctave {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.chars().nth(0).ok_or(())? {
+            '-' => PitchOctave::Octave_,
+            '0' => PitchOctave::Octave0,
+            '1' => PitchOctave::Octave1,
+            '2' => PitchOctave::Octave2,
+            '3' => PitchOctave::Octave3,
+            '4' => PitchOctave::Octave4,
+            '5' => PitchOctave::Octave5,
+            '6' => PitchOctave::Octave6,
+            '7' => PitchOctave::Octave7,
+            '8' => PitchOctave::Octave8,
+            '9' => PitchOctave::Octave9,
+            _ => return Err(()),
+        })
     }
 }

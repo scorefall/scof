@@ -3,7 +3,7 @@
 //! 
 //! ## Structure
 //! 
-//! **note length**: Almost always required number for note duration.  If it is
+//! **note duration**: Almost always required number for note length.  If it is
 //! not provided, then next must be R for a whole measure rest.
 //! 
 //! - O: 128th note
@@ -55,6 +55,10 @@
 //! - `^_`: Marcato Tenuto
 //! - `>.`: Accent Staccato
 //! - `>_`: Accent Tenuto
+//! - `+`: closed mute (or palm mute rendered as _ on guitar)
+//! - `o`: open mute
+//! - `@`: harmonic (smaller o)
+//! - `|`: pedal
 
 use std::{fmt, str::FromStr};
 use crate::Fraction;
@@ -84,22 +88,20 @@ impl fmt::Display for Note {
             write!(f, "{}", duration)?;
         }
 
-        // Write note name & octave.
-        match &self.pitch {
-            Some(pitch) => {
-                let class = match pitch.0.name {
-                    PitchName::A => "A",
-                    PitchName::B => "B",
-                    PitchName::C => "C",
-                    PitchName::D => "D",
-                    PitchName::E => "E",
-                    PitchName::F => "F",
-                    PitchName::G => "G",
-                };
-                write!(f, "{}{}", class, pitch.1)
-            },
-            None => write!(f, "R"),
+        // Write pitch
+        match self.pitch {
+            // Write note name & octave.
+            Some(ref pitch) => write!(f, "{}{}", pitch.0, pitch.1)?,
+            // Write R for rest.
+            None => write!(f, "R")?,
         }
+
+        // Write articulation symbols.
+        for articulation in &self.articulation {
+            write!(f, "{}", articulation)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -107,126 +109,66 @@ impl FromStr for Note {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Read duration.
-        let mut end_index = std::usize::MAX;
+        // Read duration (until pitch).
+        let mut end_index = Err(());
         for (i, c) in s.char_indices() {
             match c {
                 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'R' => {
-                    end_index = i;
+                    end_index = Ok(i);
                     break;
                 }
                 _ => {}
             }
         }
-        let duration = if end_index == 0 {
-            vec![]
-        } else {
-            s[..end_index].parse::<Duration2>().or(Err(()))?.0
-        };
+        let mut end_index = end_index?;
+        let duration = s[..end_index].parse::<Duration2>().or(Err(()))?.0;
 
-        /*let start_index = 0;
-        let mut end_index = 0;
-        for (i, c) in s.char_indices() {
-            if !c.is_numeric() {
-                end_index = i;
-                break;
+        // Read pitch
+        let begin_index = end_index;
+        let pitch = match s.get(begin_index..).ok_or(())? {
+            "R" => {
+                None
             }
-        }
-
-        // Read rest of duration.
-        let duration = if s[end_index..].chars().next() == Some('/') {
-            let numer = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            end_index += 1;
-
-            let start_index = end_index;
-
-            for (i, c) in s[start_index..].char_indices() {
-                if !c.is_numeric() {
-                    end_index = i;
-                    break;
-                }
-            }
-
-            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            Fraction::new(numer, denom)
-        } else {
-            let numer = 1;
-            let denom = s[start_index..end_index].parse::<u8>().or(Err(()))?;
-
-            Fraction::new(numer, denom)
-        };*/
-
-
-        let articulation = vec![];
-
-        // Read note name.
-        match s.get(end_index..).ok_or(())? {
-            "R" => Ok(Note {
-                pitch: None,
-                duration,
-                articulation,
-            }),
             a => {
-                let two = a.chars().collect::<Vec<char>>();
-                let letter_name = two[0];
-                let octave_num = match two[1] {
-                    '-' => PitchOctave::Octave_,
-                    '0' => PitchOctave::Octave0,
-                    '1' => PitchOctave::Octave1,
-                    '2' => PitchOctave::Octave2,
-                    '3' => PitchOctave::Octave3,
-                    '4' => PitchOctave::Octave4,
-                    '5' => PitchOctave::Octave5,
-                    '6' => PitchOctave::Octave6,
-                    '7' => PitchOctave::Octave7,
-                    '8' => PitchOctave::Octave8,
-                    '9' => PitchOctave::Octave9,
-                    _ => return Err(()),
-                };
+                // Get Pitch Class
+                let mut end_index2 = Err(());
+                for (i, c) in s.char_indices().skip(begin_index) {
+                    match c {
+                        '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
+                            | '8' | '9' =>
+                        {
+                            end_index2 = Ok(i);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                end_index = end_index2?;
 
-                Ok(Note {
-                    pitch: Some((
-                        match letter_name {
-                            'A' => PitchClass {
-                                name: PitchName::A,
-                                accidental: None,
-                            },
-                            'B' => PitchClass {
-                                name: PitchName::B,
-                                accidental: None,
-                            },
-                            'C' => PitchClass {
-                                name: PitchName::C,
-                                accidental: None,
-                            },
-                            'D' => PitchClass {
-                                name: PitchName::D,
-                                accidental: None,
-                            },
-                            'E' => PitchClass {
-                                name: PitchName::E,
-                                accidental: None,
-                            },
-                            'F' => PitchClass {
-                                name: PitchName::F,
-                                accidental: None,
-                            },
-                            'G' => PitchClass {
-                                name: PitchName::G,
-                                accidental: None,
-                            },
-                            // FIXME: return Err
-                            a => panic!("Failed to parse '{}'", a),
-                        },
-                        octave_num,
-                    )),
-                    duration,
-                    articulation,
-                })
+                let pitch_class = s[begin_index..end_index].parse::<PitchClass>()?;
+
+                // Get Pitch Octave
+                let pitch_octave = s[end_index..end_index+1].parse::<PitchOctave>()?;
+
+                Some((pitch_class, pitch_octave))
             }
+        };
+        end_index += 1;
+
+        // Read articulation symbols.
+        let mut articulation = vec![];
+        let mut articulation_str = "".to_string();
+        for articulation_char in s[end_index..].chars() {
+            articulation_str.clear();
+            articulation_str.push(articulation_char);
+            articulation.push(articulation_str.parse::<Articulation>().or(Err(()))?);
         }
+
+        Ok(Note {
+            pitch,
+            duration,
+            articulation,
+        })
     }
 }
 
@@ -237,15 +179,7 @@ impl Note {
             // Calculate number of octaves from middle C (C4).
             let octaves = pitch.1 as i32 - 4;
             // Calculate number of steps from C within key.
-            let steps = match pitch.0.name {
-                PitchName::C => 0,
-                PitchName::D => 1,
-                PitchName::E => 2,
-                PitchName::F => 3,
-                PitchName::G => 4,
-                PitchName::A => 5,
-                PitchName::B => 6,
-            };
+            let steps = pitch.0.name as i32;
             // Calculate total number of steps from middle C.
             let total_steps = steps + octaves * 7;
 

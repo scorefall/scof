@@ -50,14 +50,14 @@ impl Duration {
 
         *self = match *self {
             Den128(n, d) => Den128(n, d),
-            Den64(n, d, a) => Den64(n, d, 1),
+            Den64(n, d, _a) => Den64(n, d, 1),
             Den32(n, d, a) => Den32(n, d, (a + 1).min(2)),
             Den16(n, d, a) => Den16(n, d, (a + 1).min(3)),
             Den8(n, d, a) => Den8(n, d, (a + 1).min(4)),
             Den4(n, d, a) => Den4(n, d, (a + 1).min(4)),
             Den2(n, d, a) => Den2(n, d, (a + 1).min(3)),
             Num1(n, d, a) => Num1(n, d, (a + 1).min(2)),
-            Num2(n, d, a) => Num2(n, d, 1),
+            Num2(n, d, _a) => Num2(n, d, 1),
             Num4(n, d) => Num4(n, d),
         }
     }
@@ -68,7 +68,7 @@ impl Duration {
 
         *self = match *self {
             Den128(n, d) => Den128(n, d),
-            Den64(n, d, a) => Den64(n, d, 0),
+            Den64(n, d, _a) => Den64(n, d, 0),
             Den32(n, d, a) => Den32(n, d, a.saturating_sub(1)),
             Den16(n, d, a) => Den16(n, d, a.saturating_sub(1)),
             Den8(n, d, a) => Den8(n, d, a.saturating_sub(1)),
@@ -86,14 +86,14 @@ impl Duration {
 
         match *self {
             Den128(n, d) => Fraction::new(1, 128) * Fraction::new(d, n),
-            Den64(n, d, a) => Fraction::new(1, 64) * Fraction::new(d, n),
-            Den32(n, d, a) => Fraction::new(1, 32) * Fraction::new(d, n),
-            Den16(n, d, a) => Fraction::new(1, 16) * Fraction::new(d, n),
-            Den8(n, d, a) => Fraction::new(1, 8) * Fraction::new(d, n),
-            Den4(n, d, a) => Fraction::new(1, 4) * Fraction::new(d, n),
-            Den2(n, d, a) => Fraction::new(1, 2) * Fraction::new(d, n),
-            Num1(n, d, a) => Fraction::new(1, 1) * Fraction::new(d, n),
-            Num2(n, d, a) => Fraction::new(2, 1) * Fraction::new(d, n),
+            Den64(n, d, _a) => Fraction::new(1, 64) * Fraction::new(d, n),
+            Den32(n, d, _a) => Fraction::new(1, 32) * Fraction::new(d, n),
+            Den16(n, d, _a) => Fraction::new(1, 16) * Fraction::new(d, n),
+            Den8(n, d, _a) => Fraction::new(1, 8) * Fraction::new(d, n),
+            Den4(n, d, _a) => Fraction::new(1, 4) * Fraction::new(d, n),
+            Den2(n, d, _a) => Fraction::new(1, 2) * Fraction::new(d, n),
+            Num1(n, d, _a) => Fraction::new(1, 1) * Fraction::new(d, n),
+            Num2(n, d, _a) => Fraction::new(2, 1) * Fraction::new(d, n),
             Num4(n, d) => Fraction::new(4, 1) * Fraction::new(d, n),
         }
     }
@@ -112,16 +112,16 @@ impl fmt::Display for Duration {
         }
 
         match *self {
-            Den128(n, d) => write!(f, "O"),
-            Den64(n, d, a) => augment(f, 'X', a),
-            Den32(n, d, a) => augment(f, 'Y', a),
-            Den16(n, d, a) => augment(f, 'S', a),
-            Den8(n, d, a) => augment(f, 'T', a),
-            Den4(n, d, a) => augment(f, 'Q', a),
-            Den2(n, d, a) => augment(f, 'U', a),
-            Num1(n, d, a) => augment(f, 'W', a),
-            Num2(n, d, a) => augment(f, 'V', a),
-            Num4(n, d) => write!(f, "L"),
+            Den128(_n, _d) => write!(f, "O"),
+            Den64(_n, _d, a) => augment(f, 'X', a),
+            Den32(_n, _d, a) => augment(f, 'Y', a),
+            Den16(_n, _d, a) => augment(f, 'S', a),
+            Den8(_n, _d, a) => augment(f, 'T', a),
+            Den4(_n, _d, a) => augment(f, 'Q', a),
+            Den2(_n, _d, a) => augment(f, 'U', a),
+            Num1(_n, _d, a) => augment(f, 'W', a),
+            Num2(_n, _d, a) => augment(f, 'V', a),
+            Num4(_n, _d) => write!(f, "L"),
         }
     }
 }
