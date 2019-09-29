@@ -71,6 +71,42 @@ pub use self::articulation::*;
 pub use self::pitch::*;
 pub use self::duration::*;
 
+/// Number of steps above middle C
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Steps(pub i32);
+
+impl std::ops::Add for Steps {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Steps { 0: self.0 + rhs.0 }
+    }
+}
+
+impl std::ops::Sub for Steps {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Steps { 0: self.0 - rhs.0 }
+    }
+}
+
+impl std::ops::Mul<i32> for Steps {
+    type Output = Self;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Steps { 0: self.0 * rhs }
+    }
+}
+
+impl std::ops::Div<i32> for Steps {
+    type Output = Self;
+
+    fn div(self, rhs: i32) -> Self::Output {
+        Steps { 0: self.0 / rhs }
+    }
+}
+
 /// A note.
 #[derive(Clone)]
 pub struct Note {
@@ -175,16 +211,16 @@ impl FromStr for Note {
 
 impl Note {
     /// Get the note's visual distance above middle C (C4).
-    pub fn visual_distance(&self) -> i32 {
+    pub fn visual_distance(&self) -> Option<Steps> {
         if let Some(ref pitch) = self.pitch {
             // Calculate number of octaves from middle C (C4).
             let octaves = pitch.1 as i32 - 4;
             // Calculate number of steps from C within key.
             let steps = pitch.0.name as i32;
             // Calculate total number of steps from middle C.
-            steps + octaves * 7
+            Some(Steps { 0: steps + octaves * 7 })
         } else {
-            0
+            None
         }
     }
 

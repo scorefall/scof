@@ -17,14 +17,16 @@
 
 use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
-use std::fmt;
 use std::str::FromStr;
 
 pub mod note;
 mod fraction;
 
 pub use fraction::{Fraction, IsZero};
-pub use note::{Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave, Duration};
+pub use note::{
+    Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave,
+    Duration, Steps,
+};
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
