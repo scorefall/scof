@@ -29,6 +29,8 @@ pub use note::{Note, Articulation, PitchClass, PitchName, PitchAccidental, Pitch
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Cursor {
+    /// Movement number at cursor
+    movement: usize,
     /// Measure number at cursor
     measure: usize,
     /// Channel number at curosr
@@ -39,12 +41,19 @@ pub struct Cursor {
 
 impl Cursor {
     /// Create a new cursor
-    pub fn new(measure: usize, chan: usize, marking: usize) -> Self {
-        Cursor { measure, chan, marking }
+    pub fn new(movement: usize, measure: usize, chan: usize, marking: usize)
+        -> Self
+    {
+        Cursor { movement, measure, chan, marking }
     }
     /// Create a cursor from the first marking
     pub fn first_marking(&self) -> Self {
-        Cursor { measure: self.measure, chan: self.chan, marking: 0 }
+        Cursor {
+            movement: self.movement,
+            measure: self.measure,
+            chan: self.chan,
+            marking: 0
+        }
     }
     /// Move cursor left.
     pub fn left(&mut self, scof: &Scof) {
@@ -422,29 +431,28 @@ impl Default for Scof {
 
 impl Scof {
     /// Lookup a marking at a cursor position
-    fn marking_str(&self, movement: usize, cursor: &Cursor) -> Option<&String> {
-        self.movement.get(movement)?
+    fn marking_str(&self, cursor: &Cursor) -> Option<&String> {
+        self.movement.get(cursor.movement)?
             .bar.get(cursor.measure)?
             .chan.get(cursor.chan)?
             .notes.get(cursor.marking)
     }
 
     /// Get mutable vec of notes for measure at cursor position.
-    fn chan_notes_mut(&mut self, movement: usize, cursor: &Cursor)
+    fn chan_notes_mut(&mut self, cursor: &Cursor)
         -> Option<&mut Vec<String>>
     {
-        Some(&mut self.movement.get_mut(movement)?
+        Some(&mut self.movement.get_mut(cursor.movement)?
             .bar.get_mut(cursor.measure)?
             .chan.get_mut(cursor.chan)?
             .notes)
     }
 
     /// Get mutable marking at a cursor position
-    fn marking_str_mut(&mut self, movement: usize, cursor: &Cursor)
+    fn marking_str_mut(&mut self, cursor: &Cursor)
         -> Option<&mut String>
     {
-        self.chan_notes_mut(movement, cursor)?
-            .get_mut(cursor.marking)
+        self.chan_notes_mut(cursor)?.get_mut(cursor.marking)
     }
 
     /// Get the last measure of a movement
@@ -487,26 +495,26 @@ impl Scof {
 
     /// Get the marking at cursor
     pub fn marking(&self, cursor: &Cursor) -> Option<Marking> {
-        let string = self.marking_str(0, cursor)?;
+        let string = self.marking_str(cursor)?;
         string.parse::<Marking>().ok()
     }
 
     /// Get the note at cursor
     pub fn note(&self, cursor: &Cursor) -> Option<Note> {
-        let string = self.marking_str(0, cursor)?;
+        let string = self.marking_str(cursor)?;
         string.parse::<Note>().ok()
     }
 
     /// Insert a note after the cursor.
     pub fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
-        let string = self.chan_notes_mut(0, &cursor.clone().right_unchecked())?
+        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .insert(cursor.marking + 1, marking.to_string());
         Some(())
     }
 
     /// Remove the note after the cursor.
     pub fn remove_after(&mut self, cursor: &Cursor) -> Option<Note> {
-        let string = self.chan_notes_mut(0, &cursor.clone().right_unchecked())?
+        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .remove(cursor.marking);
 
         string.parse::<Note>().ok()
@@ -516,7 +524,7 @@ impl Scof {
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, PitchOctave)) {
         let mut note = self.note(cursor).unwrap();
         note.set_pitch(pitch);
-        let m = self.marking_str_mut(0, cursor).unwrap();
+        let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
 
@@ -524,7 +532,7 @@ impl Scof {
     pub fn set_duration(&mut self, cursor: &Cursor, dur: Vec<Duration>) {
         let mut note = self.note(cursor).unwrap();
         note.set_duration(dur);
-        let m = self.marking_str_mut(0, cursor).unwrap();
+        let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
 
@@ -532,7 +540,7 @@ impl Scof {
     pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index: usize) {
         let mut note = self.note(cursor).unwrap();
         note.set_duration_indexed(dur, index);
-        let m = self.marking_str_mut(0, cursor).unwrap();
+        let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
 }
