@@ -72,6 +72,7 @@ pub use self::pitch::*;
 pub use self::duration::*;
 
 /// A note.
+#[derive(Clone)]
 pub struct Note {
     /// Pitch & Octave
     pub pitch: Option<(PitchClass, PitchOctave)>,
@@ -173,7 +174,7 @@ impl FromStr for Note {
 }
 
 impl Note {
-    /// Get the note's visual distance from middle C (C4).
+    /// Get the note's visual distance above middle C (C4).
     pub fn visual_distance(&self) -> i32 {
         if let Some(ref pitch) = self.pitch {
             // Calculate number of octaves from middle C (C4).
@@ -181,10 +182,7 @@ impl Note {
             // Calculate number of steps from C within key.
             let steps = pitch.0.name as i32;
             // Calculate total number of steps from middle C.
-            let total_steps = steps + octaves * 7;
-
-            // Invert value, because higher notes = -y
-            -total_steps
+            steps + octaves * 7
         } else {
             0
         }
