@@ -79,7 +79,7 @@ impl std::ops::Add for Steps {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Steps { 0: self.0 + rhs.0 }
+        Steps(self.0 + rhs.0)
     }
 }
 
@@ -87,7 +87,7 @@ impl std::ops::Sub for Steps {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Steps { 0: self.0 - rhs.0 }
+        Steps(self.0 - rhs.0)
     }
 }
 
@@ -95,7 +95,7 @@ impl std::ops::Mul<i32> for Steps {
     type Output = Self;
 
     fn mul(self, rhs: i32) -> Self::Output {
-        Steps { 0: self.0 * rhs }
+        Steps(self.0 * rhs)
     }
 }
 
@@ -103,7 +103,7 @@ impl std::ops::Div<i32> for Steps {
     type Output = Self;
 
     fn div(self, rhs: i32) -> Self::Output {
-        Steps { 0: self.0 / rhs }
+        Steps(self.0 / rhs)
     }
 }
 
