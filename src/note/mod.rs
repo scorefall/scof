@@ -235,8 +235,16 @@ impl Note {
     }
 
     /// Set duration of note (indexed).
-    pub fn set_duration_indexed(&mut self, duration: Duration, index: usize) {
+    ///
+    /// Returns true if a whole measuer rest is changed.
+    pub fn set_duration_indexed(&mut self, duration: Duration, index: usize)
+        -> bool
+    {
+        if self.duration.is_empty() {
+            return true;
+        }
         self.duration[index] = duration;
+        false
     }
 
     /// Get the fraction of the note.

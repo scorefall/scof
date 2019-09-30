@@ -525,6 +525,11 @@ impl Scof {
     /// Set pitch class and octave of a note at a cursor
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, PitchOctave)) {
         let mut note = self.note(cursor).unwrap();
+        if note.duration.is_empty() {
+            // If it's a whole measure rest, insert a whole note (4/4)
+            // FIXME: Add time signatures.
+            note.duration = vec![Duration::Num1(1, 1, 0)];
+        }
         note.set_pitch(pitch);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
@@ -539,8 +544,14 @@ impl Scof {
     }
 
     /// Set duration of index within tied notes.
-    pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index: usize) {
+    pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index:   usize) {
         let mut note = self.note(cursor).unwrap();
+        if note.duration.is_empty() {
+            // If it's a whole measure rest, insert a whole note (4/4)
+            // FIXME: Add time signatures.
+            note.duration = vec![Duration::Num1(1, 1, 0)];
+            return self.set_duration(cursor, vec![dur]);
+        }
         note.set_duration_indexed(dur, index);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
