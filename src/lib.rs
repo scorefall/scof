@@ -28,6 +28,8 @@ pub use note::{
     Duration, Steps,
 };
 
+use note::Note2;
+
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct Cursor {
@@ -148,7 +150,7 @@ impl FromStr for Marking {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Marking::Note(s.parse::<Note>()?))
+        Ok(Marking::Note(s.parse::<Note2>().and_then(|a| Ok(a.0[0].clone()))?))
     }
 }
 
@@ -247,11 +249,19 @@ impl Default for Chan {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct SigRef {
+    /// Index into sig list.
+    index: u32,
+    /// Which beat of the measure the signature starts applying to.
+    beat: Option<u8>,
+}
+
 /// A bar (or measure) of music.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Bar {
-    /// Signature index
-    pub sig: Option<u32>,
+    /// Signature reference (index)
+    pub sig: Option<SigRef>,
     /// All of the channels in this piece.
     pub chan: Vec<Chan>,
     /// Repeat symbols for this measure.
@@ -397,7 +407,6 @@ impl Default for Meta {
 }
 
 /// The entire Scof zip file.
-#[derive(PartialEq)]
 pub struct Scof {
     /// The title of the piece.  When the zip file's name is
     /// "My Score \ Symphony No. 1.scof" => "My Score / Symphony No. 1".
@@ -415,6 +424,9 @@ pub struct Scof {
     pub soundfont: Vec<Instrument>,
     /// Movements for the peice.
     pub movement: Vec<Movement>,
+
+    /// Cache for durations of measures in each movement.
+    pub cache: Vec<Vec<Duration>>,
 }
 
 impl Default for Scof {
@@ -427,6 +439,8 @@ impl Default for Scof {
             synth: Synth::default(),
             movement: vec![Movement::default()],
             soundfont: vec![Instrument::default()],
+
+            cache: vec![vec![]],
         }
     }
 }
@@ -441,9 +455,7 @@ impl Scof {
     }
 
     /// Get mutable vec of notes for measure at cursor position.
-    fn chan_notes_mut(&mut self, cursor: &Cursor)
-        -> Option<&mut Vec<String>>
-    {
+    fn chan_notes_mut(&mut self, cursor: &Cursor) -> Option<&mut Vec<String>> {
         Some(&mut self.movement.get_mut(cursor.movement)?
             .bar.get_mut(cursor.measure)?
             .chan.get_mut(cursor.chan)?
@@ -451,9 +463,7 @@ impl Scof {
     }
 
     /// Get mutable marking at a cursor position
-    fn marking_str_mut(&mut self, cursor: &Cursor)
-        -> Option<&mut String>
-    {
+    fn marking_str_mut(&mut self, cursor: &Cursor) -> Option<&mut String> {
         self.chan_notes_mut(cursor)?.get_mut(cursor.marking)
     }
 
@@ -504,7 +514,7 @@ impl Scof {
     /// Get the note at cursor
     pub fn note(&self, cursor: &Cursor) -> Option<Note> {
         let string = self.marking_str(cursor)?;
-        string.parse::<Note>().ok()
+        string.parse::<Note2>().ok().and_then(|a| Some(a.0[0].clone()))
     }
 
     /// Insert a note after the cursor.
@@ -519,31 +529,31 @@ impl Scof {
         let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .remove(cursor.marking);
 
-        string.parse::<Note>().ok()
+        string.parse::<Note2>().ok().and_then(|a| Some(a.0[0].clone()))
     }
 
     /// Set pitch class and octave of a note at a cursor
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, PitchOctave)) {
         let mut note = self.note(cursor).unwrap();
-        if note.duration.is_empty() {
+/*      if note.duration.is_empty() {
             // If it's a whole measure rest, insert a whole note (4/4)
             // FIXME: Add time signatures.
             note.duration = vec![Duration::Num1(1, 1, 0)];
-        }
+        }*/
         note.set_pitch(pitch);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
 
     /// Set duration of a note.
-    pub fn set_duration(&mut self, cursor: &Cursor, dur: Vec<Duration>) {
+    pub fn set_duration(&mut self, cursor: &Cursor, dur: Duration) {
         let mut note = self.note(cursor).unwrap();
         note.set_duration(dur);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
 
-    /// Set duration of index within tied notes.
+/*    /// Set duration of index within tied notes.
     pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index:   usize) {
         let mut note = self.note(cursor).unwrap();
         if note.duration.is_empty() {
@@ -555,5 +565,13 @@ impl Scof {
         note.set_duration_indexed(dur, index);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
+    }*/
+
+    pub fn set_duration_shorter(&mut self, cursor: &Cursor, dur: Duration) {
+        
+    }
+
+    pub fn set_duration_longer(&mut self, cursor: &Cursor, dur: Duration) {
+        
     }
 }

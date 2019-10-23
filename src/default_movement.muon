@@ -3,5 +3,6 @@ sig:
   time: 4/4
   tempo: 120
 bar:
-  sig: 0
-  chan: QC4 QR UR
+  sig:
+    index: 0
+  chan: QC4 QR HR

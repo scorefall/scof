@@ -41,7 +41,7 @@ impl FromStr for PitchName {
             "G" => PitchName::G,
             "A" => PitchName::A,
             "B" => PitchName::B,
-            _ => panic!("BAD STRINGGGG: {}", s), // return Err(())
+            _ => return Err(())
         })
     }
 }

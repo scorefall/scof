@@ -12,7 +12,7 @@
 //! - S: 16th note
 //! - T: 8th note
 //! - Q: quarter note
-//! - U: half note
+//! - H: half note
 //! - W: whole note
 //! - V: double whole note (breve)
 //! - L: quadruple whole note (longa)
@@ -112,8 +112,10 @@ impl std::ops::Div<i32> for Steps {
 pub struct Note {
     /// Pitch & Octave
     pub pitch: Option<(PitchClass, PitchOctave)>,
-    /// Duration of the note as a fraction.
-    pub duration: Vec<Duration>,
+    /// Duration of the note as a fraction, second parameter is
+    /// - If Rest: Note is whole measure rest.
+    /// - If Pitch: Note is tied to previous note.
+    pub duration: (Duration, bool),
     /// Articulation.
     pub articulation: Vec<Articulation>,
 }
@@ -121,9 +123,7 @@ pub struct Note {
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Write duration.
-        for duration in &self.duration {
-            write!(f, "{}", duration)?;
-        }
+        write!(f, "{}", self.duration.0)?;
 
         // Write pitch
         match self.pitch {
@@ -139,73 +139,6 @@ impl fmt::Display for Note {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for Note {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Read duration (until pitch).
-        let mut end_index = Err(());
-        for (i, c) in s.char_indices() {
-            match c {
-                'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'R' => {
-                    end_index = Ok(i);
-                    break;
-                }
-                _ => {}
-            }
-        }
-        let mut end_index = end_index?;
-        let duration = s[..end_index].parse::<Duration2>().or(Err(()))?.0;
-
-        // Read pitch
-        let begin_index = end_index;
-        let pitch = match s.get(begin_index..).ok_or(())? {
-            "R" => {
-                None
-            }
-            a => {
-                // Get Pitch Class
-                let mut end_index2 = Err(());
-                for (i, c) in s.char_indices().skip(begin_index) {
-                    match c {
-                        '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
-                            | '8' | '9' =>
-                        {
-                            end_index2 = Ok(i);
-                            break;
-                        }
-                        _ => {}
-                    }
-                }
-                end_index = end_index2?;
-
-                let pitch_class = s[begin_index..end_index].parse::<PitchClass>()?;
-
-                // Get Pitch Octave
-                let pitch_octave = s[end_index..end_index+1].parse::<PitchOctave>()?;
-
-                Some((pitch_class, pitch_octave))
-            }
-        };
-        end_index += 1;
-
-        // Read articulation symbols.
-        let mut articulation = vec![];
-        let mut articulation_str = "".to_string();
-        for articulation_char in s[end_index..].chars() {
-            articulation_str.clear();
-            articulation_str.push(articulation_char);
-            articulation.push(articulation_str.parse::<Articulation>().or(Err(()))?);
-        }
-
-        Ok(Note {
-            pitch,
-            duration,
-            articulation,
-        })
     }
 }
 
@@ -230,26 +163,18 @@ impl Note {
     }
 
     /// Set duration of note.
-    pub fn set_duration(&mut self, duration: Vec<Duration>) {
-        self.duration = duration;
-    }
-
-    /// Set duration of note (indexed).
-    ///
-    /// Returns true if a whole measuer rest is changed.
-    pub fn set_duration_indexed(&mut self, duration: Duration, index: usize)
-        -> bool
-    {
-        if self.duration.is_empty() {
-            return true;
-        }
-        self.duration[index] = duration;
-        false
+    pub fn set_duration(&mut self, duration: Duration) {
+        self.duration = (duration, false);
     }
 
     /// Get the fraction of the note.
-    pub fn fraction(&self, index: usize) -> Option<Fraction> {
-        Some(self.duration.get(index)?.fraction())
+    pub fn fraction(&self) -> Option<Fraction> {
+        if self.pitch.is_none() && self.duration.1 {
+            // Whole measure rest, return None
+            None
+        } else {
+            Some(self.duration.0.fraction())
+        }
     }
 
     fn move_step(&self, create: (PitchClass, PitchOctave), run: &dyn Fn(&(PitchClass, PitchOctave)) -> Option<(PitchClass, PitchOctave)>) -> Note {
@@ -344,5 +269,112 @@ impl Note {
                 Some((pitch.0, pitch.1))
             }
         })
+    }
+}
+
+impl FromStr for Note {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let note2: Note2 = s.parse()?;
+
+        if note2.0.len() != 1 {
+            panic!("Wrong LENGHTR");
+            Err(())
+        } else {
+            Ok(note2.0[0].clone())
+        }
+    }
+}
+
+pub(crate) struct Note2(pub(crate) Vec<Note>);
+
+impl FromStr for Note2 {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Read duration (until pitch).
+        let mut end_index = Err(());
+        for (i, c) in s.char_indices() {
+            match c {
+                'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'R' => {
+                    end_index = Ok(i);
+                    break;
+                }
+                _ => {}
+            }
+        }
+        let mut end_index = end_index?;
+        let durations = s[..end_index].parse::<Duration2>().or(Err(()))?.0;
+
+        // Read pitch
+        let begin_index = end_index;
+        let pitch = match s.get(begin_index..).ok_or(())? {
+            "R" => {
+                None
+            }
+            a => {
+                // Get Pitch Class
+                let mut end_index2 = Err(());
+                for (i, c) in s.char_indices().skip(begin_index) {
+                    match c {
+                        '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
+                            | '8' | '9' =>
+                        {
+                            end_index2 = Ok(i);
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                end_index = end_index2?;
+
+                let pitch_class = s[begin_index..end_index].parse::<PitchClass>()?;
+
+                // Get Pitch Octave
+                let pitch_octave = s[end_index..end_index+1].parse::<PitchOctave>()?;
+
+                Some((pitch_class, pitch_octave))
+            }
+        };
+        end_index += 1;
+
+        // Read articulation symbols.
+        let mut articulation = vec![];
+        let mut articulation_str = "".to_string();
+        for articulation_char in s[end_index..].chars() {
+            articulation_str.clear();
+            articulation_str.push(articulation_char);
+            articulation.push(articulation_str.parse::<Articulation>().or(Err(()))?);
+        }
+
+        let mut notes = vec![];
+
+        for duration in durations.iter() {
+            notes.push(
+                Note {
+                    pitch,
+                    duration: (*duration, true),
+                    articulation: articulation.clone(),
+                }
+            );
+        }
+
+        if notes.len() == 0 {
+            if pitch.is_some() {
+                // There are no whole measure notes, only whole measure rests.
+                Err(())
+            } else {
+                Ok(Note2(vec![Note {
+                    pitch,
+                    duration: (Duration::Num1(1, 1, 0), true),
+                    articulation: articulation.clone(),
+                }]))
+            }
+        } else {
+            notes[0].duration.1 = false;
+
+            Ok(Note2(notes))
+        }
     }
 }
