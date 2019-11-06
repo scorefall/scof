@@ -1,6 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
+use crate::note::Steps;
+
 /// A Pitch Name.
 #[derive(Copy, Clone)]
 pub enum PitchName {
@@ -249,5 +251,40 @@ impl FromStr for PitchOctave {
             '9' => PitchOctave::Octave9,
             _ => return Err(()),
         })
+    }
+}
+
+/// Pitch Class & Octave
+#[derive(Copy, Clone)]
+pub struct Pitch(pub PitchClass, pub PitchOctave);
+
+impl Pitch {
+    pub fn visual_distance(&self) -> Steps {
+        // Calculate number of octaves from middle C (C4).
+        let octaves = self.1 as i32 - 4;
+        // Calculate number of steps from C within key.
+        let steps = self.0.name as i32;
+
+        // Calculate total number of steps from middle C.
+        Steps { 0: steps + octaves * 7 }
+    }
+}
+
+impl fmt::Display for Pitch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}{}", self.0, self.1)
+    }
+}
+
+impl FromStr for Pitch {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let pitch_class = s[0..s.len()-1].parse::<PitchClass>()?;
+
+        // Get Pitch Octave
+        let pitch_octave = s[s.len()-1..].parse::<PitchOctave>()?;
+
+        Ok(Pitch(pitch_class, pitch_octave))
     }
 }

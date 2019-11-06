@@ -25,10 +25,8 @@ mod fraction;
 pub use fraction::{Fraction, IsZero};
 pub use note::{
     Note, Articulation, PitchClass, PitchName, PitchAccidental, PitchOctave,
-    Duration, Steps,
+    Steps, Pitch,
 };
-
-use note::Note2;
 
 /// Cursor pointing to a marking
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -150,7 +148,7 @@ impl FromStr for Marking {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Marking::Note(s.parse::<Note2>().and_then(|a| Ok(a.0[0].clone()))?))
+        Ok(Marking::Note(s.parse::<Note>().and_then(|a| Ok(a))?))
     }
 }
 
@@ -225,9 +223,9 @@ pub struct Sig {
     /// The key signature (0-23 quarter steps above C, 24+ reserved for middle
     /// eastern and Indian key signatures).
     pub key: u8,
-    /// Time signature (num_beats/note_len), 4/4 is common.
-    pub time: String,
-    /// BPM (beats per minute), 120 is common (default=120).
+    // /// Time signature (num_beats/note_len), 4/4 is common.
+    // pub time: String,
+    /// MPM (measures per minute), 30 (120 BPM) is common (default=30).
     pub tempo: u16,
     /// % Swing (default=50).
     pub swing: Option<u8>,
@@ -425,8 +423,8 @@ pub struct Scof {
     /// Movements for the peice.
     pub movement: Vec<Movement>,
 
-    /// Cache for durations of measures in each movement.
-    pub cache: Vec<Vec<Duration>>,
+    /// Cache for time signatures of each measure in each movement.
+    pub cache: Vec<Vec<Fraction>>,
 }
 
 impl Default for Scof {
@@ -514,7 +512,7 @@ impl Scof {
     /// Get the note at cursor
     pub fn note(&self, cursor: &Cursor) -> Option<Note> {
         let string = self.marking_str(cursor)?;
-        string.parse::<Note2>().ok().and_then(|a| Some(a.0[0].clone()))
+        string.parse::<Note>().ok().and_then(|a| Some(a))
     }
 
     /// Insert a note after the cursor.
@@ -529,11 +527,11 @@ impl Scof {
         let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .remove(cursor.marking);
 
-        string.parse::<Note2>().ok().and_then(|a| Some(a.0[0].clone()))
+        string.parse::<Note>().ok().and_then(|a| Some(a))
     }
 
     /// Set pitch class and octave of a note at a cursor
-    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: (PitchClass, PitchOctave)) {
+    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: Pitch) {
         let mut note = self.note(cursor).unwrap();
 /*      if note.duration.is_empty() {
             // If it's a whole measure rest, insert a whole note (4/4)
@@ -546,9 +544,21 @@ impl Scof {
     }
 
     /// Set duration of a note.
-    pub fn set_duration(&mut self, cursor: &Cursor, dur: Duration) {
+    pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
         let mut note = self.note(cursor).unwrap();
+        let old = note.duration;
         note.set_duration(dur);
+        if old > dur {
+            // Note is becoming shorter.
+            let rests = old - dur;
+
+            
+        } else {
+            // Note is becoming longer.
+            let tied_value = dur - old;
+
+            
+        }
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
@@ -566,12 +576,4 @@ impl Scof {
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }*/
-
-    pub fn set_duration_shorter(&mut self, cursor: &Cursor, dur: Duration) {
-        
-    }
-
-    pub fn set_duration_longer(&mut self, cursor: &Cursor, dur: Duration) {
-        
-    }
 }

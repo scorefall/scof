@@ -65,11 +65,9 @@ use crate::Fraction;
 
 mod articulation;
 mod pitch;
-mod duration;
 
 pub use self::articulation::*;
 pub use self::pitch::*;
-pub use self::duration::*;
 
 /// Number of steps above middle C
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
@@ -110,12 +108,10 @@ impl std::ops::Div<i32> for Steps {
 /// A note.
 #[derive(Clone)]
 pub struct Note {
-    /// Pitch & Octave
-    pub pitch: Option<(PitchClass, PitchOctave)>,
-    /// Duration of the note as a fraction, second parameter is
-    /// - If Rest: Note is whole measure rest.
-    /// - If Pitch: Note is tied to previous note.
-    pub duration: (Duration, bool),
+    /// Pitch Class & Octave
+    pub pitch: Option<Pitch>,
+    /// Duration of the note as a fraction.
+    pub duration: Fraction,
     /// Articulation.
     pub articulation: Vec<Articulation>,
 }
@@ -123,12 +119,12 @@ pub struct Note {
 impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Write duration.
-        write!(f, "{}", self.duration.0)?;
+        write!(f, "{}", self.duration)?;
 
         // Write pitch
         match self.pitch {
             // Write note name & octave.
-            Some(ref pitch) => write!(f, "{}{}", pitch.0, pitch.1)?,
+            Some(ref pitch) => write!(f, "{}", pitch)?,
             // Write R for rest.
             None => write!(f, "R")?,
         }
@@ -146,38 +142,28 @@ impl Note {
     /// Get the note's visual distance above middle C (C4).
     pub fn visual_distance(&self) -> Option<Steps> {
         if let Some(ref pitch) = self.pitch {
-            // Calculate number of octaves from middle C (C4).
-            let octaves = pitch.1 as i32 - 4;
-            // Calculate number of steps from C within key.
-            let steps = pitch.0.name as i32;
-            // Calculate total number of steps from middle C.
-            Some(Steps { 0: steps + octaves * 7 })
+            Some(pitch.visual_distance())
         } else {
             None
         }
     }
 
     /// Set pitch class and octave.
-    pub fn set_pitch(&mut self, pitch: (PitchClass, PitchOctave)) {
+    pub fn set_pitch(&mut self, pitch: Pitch) {
         self.pitch = Some(pitch);
     }
 
     /// Set duration of note.
-    pub fn set_duration(&mut self, duration: Duration) {
-        self.duration = (duration, false);
+    pub fn set_duration(&mut self, duration: Fraction) {
+        self.duration = duration;
     }
 
     /// Get the fraction of the note.
-    pub fn fraction(&self) -> Option<Fraction> {
-        if self.pitch.is_none() && self.duration.1 {
-            // Whole measure rest, return None
-            None
-        } else {
-            Some(self.duration.0.fraction())
-        }
+    pub fn duration(&self) -> Fraction {
+        self.duration
     }
 
-    fn move_step(&self, create: (PitchClass, PitchOctave), run: &dyn Fn(&(PitchClass, PitchOctave)) -> Option<(PitchClass, PitchOctave)>) -> Note {
+    fn move_step(&self, create: Pitch, run: &dyn Fn(&Pitch) -> Option<Pitch>) -> Note {
         let pitch = if let Some(ref pitch) = self.pitch {
             (run)(pitch)
         } else {
@@ -192,28 +178,28 @@ impl Note {
     }
 
     /// Calculate note one quarter step up.
-    pub fn quarter_step_up(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn quarter_step_up(&self, create: Pitch) -> Note {
         self.step_up(create) // FIXME
     }
 
     /// Calculate note one quarter step down.
-    pub fn quarter_step_down(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn quarter_step_down(&self, create: Pitch) -> Note {
         self.step_down(create) // FIXME
     }
 
     /// Calculate note one half step up.
-    pub fn half_step_up(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn half_step_up(&self, create: Pitch) -> Note {
         self.step_up(create) // FIXME
     }
 
     /// Calculate note one half step down.
-    pub fn half_step_down(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn half_step_down(&self, create: Pitch) -> Note {
         self.step_down(create) // FIXME
     }
 
     /// Calculate note one step up within the key.
     /// - `create`: Note that is generated from a rest.
-    pub fn step_up(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn step_up(&self, create: Pitch) -> Note {
         self.move_step(create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::B, false),
@@ -231,19 +217,19 @@ impl Note {
             };
 
             if let Some(pitch_octave) = pitch_octave {
-                Some((PitchClass {
+                Some(Pitch(PitchClass {
                     name: pitch_class,
                     accidental: pitch.0.accidental,
                 }, pitch_octave))
             } else {
-                Some((pitch.0, pitch.1))
+                Some(*pitch)
             }
         })
     }
 
     /// Calculate note one step down within the key.
     /// - `create`: Note that is generated from a rest.
-    pub fn step_down(&self, create: (PitchClass, PitchOctave)) -> Note {
+    pub fn step_down(&self, create: Pitch) -> Note {
         self.move_step(create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::G, false),
@@ -261,35 +247,18 @@ impl Note {
             };
 
             if let Some(pitch_octave) = pitch_octave {
-                Some((PitchClass {
+                Some(Pitch(PitchClass {
                     name: pitch_class,
                     accidental: pitch.0.accidental,
                 }, pitch_octave))
             } else {
-                Some((pitch.0, pitch.1))
+                Some(Pitch(pitch.0, pitch.1))
             }
         })
     }
 }
 
 impl FromStr for Note {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let note2: Note2 = s.parse()?;
-
-        if note2.0.len() != 1 {
-            panic!("Wrong LENGHTR");
-            Err(())
-        } else {
-            Ok(note2.0[0].clone())
-        }
-    }
-}
-
-pub(crate) struct Note2(pub(crate) Vec<Note>);
-
-impl FromStr for Note2 {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -305,7 +274,7 @@ impl FromStr for Note2 {
             }
         }
         let mut end_index = end_index?;
-        let durations = s[..end_index].parse::<Duration2>().or(Err(()))?.0;
+        let duration = s[..end_index].parse::<Fraction>().or(Err(()))?;
 
         // Read pitch
         let begin_index = end_index;
@@ -329,12 +298,9 @@ impl FromStr for Note2 {
                 }
                 end_index = end_index2?;
 
-                let pitch_class = s[begin_index..end_index].parse::<PitchClass>()?;
+                let pitch = s[begin_index..end_index+1].parse::<Pitch>()?;
 
-                // Get Pitch Octave
-                let pitch_octave = s[end_index..end_index+1].parse::<PitchOctave>()?;
-
-                Some((pitch_class, pitch_octave))
+                Some(pitch)
             }
         };
         end_index += 1;
@@ -348,33 +314,10 @@ impl FromStr for Note2 {
             articulation.push(articulation_str.parse::<Articulation>().or(Err(()))?);
         }
 
-        let mut notes = vec![];
-
-        for duration in durations.iter() {
-            notes.push(
-                Note {
-                    pitch,
-                    duration: (*duration, true),
-                    articulation: articulation.clone(),
-                }
-            );
-        }
-
-        if notes.len() == 0 {
-            if pitch.is_some() {
-                // There are no whole measure notes, only whole measure rests.
-                Err(())
-            } else {
-                Ok(Note2(vec![Note {
-                    pitch,
-                    duration: (Duration::Num1(1, 1, 0), true),
-                    articulation: articulation.clone(),
-                }]))
-            }
-        } else {
-            notes[0].duration.1 = false;
-
-            Ok(Note2(notes))
-        }
+        Ok(Note {
+            pitch,
+            duration,
+            articulation: articulation.clone(),
+        })
     }
 }
