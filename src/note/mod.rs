@@ -282,7 +282,7 @@ impl FromStr for Note {
             "R" => {
                 None
             }
-            a => {
+            _ => {
                 // Get Pitch Class
                 let mut end_index2 = Err(());
                 for (i, c) in s.char_indices().skip(begin_index) {

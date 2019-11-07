@@ -179,6 +179,7 @@ pub enum Repeat {
 /////////////////////
 
 /// A waveform.
+#[allow(unused)] // FIXME: Have ability to use waveform
 pub struct Waveform {
     /// True: Signed 16-bit integer, False: Signed 8-bit integer.
     si16: bool,
@@ -517,7 +518,8 @@ impl Scof {
 
     /// Insert a note after the cursor.
     pub fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
-        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
+        // FIXME: Implement insert?
+        let _string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .insert(cursor.marking + 1, marking.to_string());
         Some(())
     }
@@ -549,31 +551,17 @@ impl Scof {
         let old = note.duration;
         note.set_duration(dur);
         if old > dur {
-            // Note is becoming shorter.
-            let rests = old - dur;
+            // FIXME: Note is becoming shorter.
+            let _rests = old - dur;
 
             
         } else {
-            // Note is becoming longer.
-            let tied_value = dur - old;
+            // FIXME: Note is becoming longer.
+            let _tied_value = dur - old;
 
             
         }
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }
-
-/*    /// Set duration of index within tied notes.
-    pub fn set_duration_indexed(&mut self, cursor: &Cursor, dur: Duration, index:   usize) {
-        let mut note = self.note(cursor).unwrap();
-        if note.duration.is_empty() {
-            // If it's a whole measure rest, insert a whole note (4/4)
-            // FIXME: Add time signatures.
-            note.duration = vec![Duration::Num1(1, 1, 0)];
-            return self.set_duration(cursor, vec![dur]);
-        }
-        note.set_duration_indexed(dur, index);
-        let m = self.marking_str_mut(cursor).unwrap();
-        *m = note.to_string();
-    }*/
 }
