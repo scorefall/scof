@@ -85,6 +85,7 @@ impl Cursor {
     /// ended.  If the measure has ended, the cursor is not changed.
     pub fn right_checked(&mut self, scof: &Scof) -> bool {
         let len = scof.marking_len(self);
+        cala::note!("Rgiht CHecka {} {}", self.marking, len);
         if self.marking + 1 < len {
             self.marking += 1;
             false
@@ -560,13 +561,13 @@ impl Scof {
             });
         } else {
             let mut tied_value = dur - old;
-            let mut cursor = cursor.clone();
+            let mut cursor = cursor.clone().right_unchecked();
 
             cala::note!("Longer by {}", tied_value);
 
             while !tied_value.is_zero() {
                 cala::note!("Loop @{}", tied_value);
-                if cursor.right_checked(self) {
+                if cursor.marking > self.marking_len(&cursor) {
                     cala::note!("Next measure");
                     cursor.right(self);
                     // FIXME: Instead of breaking, implement ties.
