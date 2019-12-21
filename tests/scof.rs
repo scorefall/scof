@@ -18,7 +18,7 @@ fn metadata() {
     assert_eq!(input, output);
 }
 
-/*#[test]
+#[test]
 fn movement() {
     let input = include_str!("../scof/Movement/The Beginning.muon");
 
@@ -34,7 +34,7 @@ fn movement() {
 
     assert_eq!(style, style_clone);
     assert_eq!(input, output);
-}*/
+}
 
 #[test]
 fn style() {

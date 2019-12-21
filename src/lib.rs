@@ -241,9 +241,9 @@ pub struct Sig {
     /// The key signature (0-23 quarter steps above C, 24+ reserved for middle
     /// eastern and Indian key signatures).
     pub key: u8,
-    // /// Time signature (num_beats/note_len), 4/4 is common.
-    // pub time: String,
-    /// MPM (measures per minute), 30 (120 BPM) is common (default=30).
+    /// Time signature (num_beats/note_len), 4/4 is common.
+    pub time: String,
+    /// BPM (beats per minute), 120 BPM is common (default=120).
     pub tempo: u16,
     /// % Swing (default=50).
     pub swing: Option<u8>,
