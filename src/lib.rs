@@ -50,6 +50,7 @@ impl Cursor {
     {
         Cursor { movement, measure, chan, marking }
     }
+
     /// Create a cursor from the first marking
     pub fn first_marking(&self) -> Self {
         Cursor {
@@ -59,6 +60,7 @@ impl Cursor {
             marking: 0
         }
     }
+
     /// Move cursor left.
     pub fn left(&mut self, scof: &Scof) {
         if self.marking > 0 {
@@ -69,22 +71,34 @@ impl Cursor {
             self.marking = if len > 0 { len - 1 } else { 0 };
         }
     }
-    /// Move cursor right.
+
+    /// Move cursor right, and to the next measure if the measure ended.
     pub fn right(&mut self, scof: &Scof) {
-        let len = scof.marking_len(self);
-        if self.marking + 1 < len {
-            self.marking += 1;
-        } else {
+        if self.right_checked(scof) {
             // Measure has ended.
             self.measure += 1;
             self.marking = 0;
         }
     }
-    /// Move cursor right.
+
+    /// Move cursor right within the measure, returning true if the measure
+    /// ended.  If the measure has ended, the cursor is not changed.
+    pub fn right_checked(&mut self, scof: &Scof) -> bool {
+        let len = scof.marking_len(self);
+        if self.marking + 1 < len {
+            self.marking += 1;
+            false
+        } else {
+            true
+        }
+    }
+
+    /// Move cursor to the right within the measure, not checking if it ended.
     pub fn right_unchecked(&mut self) -> Self {
         self.marking += 1;
         self.clone()
     }
+
     /// Returns true if it's the first bar of music.
     pub fn is_first_bar(&self) -> bool {
         self.measure == 0
@@ -552,39 +566,52 @@ impl Scof {
 
             while !tied_value.is_zero() {
                 cala::note!("Loop @{}", tied_value);
-                if let Some(mut note) = self.remove_after(&cursor) {
-                    cala::note!("Removed: {}", note.duration);
-                    if note.duration <= tied_value {
-                        tied_value -= note.duration;
-                        cala::note!("Decrement to: {}", tied_value);
-                    } else {
-                        note.duration -= tied_value;
-                        cala::note!("Reduce to: {}", note.duration);
-                        self.insert_after(&cursor, note);
-                        break;
-                    }
-                } else {
+                if cursor.right_checked(self) {
                     cala::note!("Next measure");
                     cursor.right(self);
+                    // FIXME: Instead of breaking, implement ties.
+                    break;
+                } else {
+                    if let Some(mut note) = self.remove_at(&cursor) {
+                        cala::note!("Removed: {}", note.duration);
+                        if note.duration <= tied_value {
+                            tied_value -= note.duration;
+                            cala::note!("Decrement to: {}", tied_value);
+                        } else {
+                            note.duration -= tied_value;
+                            cala::note!("Reduce to: {}", note.duration);
+                            self.insert_at(&cursor, note);
+                            break;
+                        }
+                    } else {
+                        cala::note!("Nothing to remove, next measure doesn't exist yet");
+                        break;
+                    }
                 }
             }
         }
-        let m = self.marking_str_mut(cursor).unwrap();
+        let m = self.marking_str_mut(&cursor).unwrap();
         *m = note.to_string();
     }
 
+    // FIXME: Needed?
     /// Insert a note after the cursor.
     fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
-        // FIXME: Implement insert?
         let _string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
             .insert(cursor.marking + 1, marking.to_string());
         Some(())
     }
 
+    /// Insert a note after the cursor.
+    fn insert_at(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
+        self.chan_notes_mut(cursor)?.insert(cursor.marking, marking.to_string());
+        Some(())
+    }
+
     /// Remove the note after the cursor.
-    fn remove_after(&mut self, cursor: &Cursor) -> Option<Note> {
-        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
-            .remove(cursor.marking + 1);
+    fn remove_at(&mut self, cursor: &Cursor) -> Option<Note> {
+        let notes = self.chan_notes_mut(cursor)?;
+        let string = notes.remove(cursor.marking);
 
         cala::note!("REMOVE \"{}\"", string);
 
