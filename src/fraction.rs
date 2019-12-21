@@ -1,6 +1,6 @@
 //! Fraction
 
-use std::ops::{Mul, Add, Sub, Div};
+use std::ops::{Mul, Add, Sub, Div, MulAssign, AddAssign, SubAssign, DivAssign};
 use std::convert::TryInto;
 use std::cmp::Ordering;
 use std::{fmt, str::FromStr};
@@ -115,6 +115,30 @@ impl Sub for Fraction {
             num: num / gcd,
             den: den / gcd,
         }
+    }
+}
+
+impl SubAssign for Fraction {
+    fn sub_assign(&mut self, other: Self) {
+        *self = *self - other;
+    }
+}
+
+impl AddAssign for Fraction {
+    fn add_assign(&mut self, other: Self) {
+        *self = *self + other;
+    }
+}
+
+impl MulAssign for Fraction {
+    fn mul_assign(&mut self, other: Self) {
+        *self = *self * other;
+    }
+}
+
+impl DivAssign for Fraction {
+    fn div_assign(&mut self, other: Self) {
+        *self = *self / other;
     }
 }
 

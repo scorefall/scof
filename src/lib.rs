@@ -518,22 +518,6 @@ impl Scof {
         string.parse::<Note>().ok().and_then(|a| Some(a))
     }
 
-    /// Insert a note after the cursor.
-    pub fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
-        // FIXME: Implement insert?
-        let _string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
-            .insert(cursor.marking + 1, marking.to_string());
-        Some(())
-    }
-
-    /// Remove the note after the cursor.
-    pub fn remove_after(&mut self, cursor: &Cursor) -> Option<Note> {
-        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
-            .remove(cursor.marking);
-
-        string.parse::<Note>().ok().and_then(|a| Some(a))
-    }
-
     /// Set pitch class and octave of a note at a cursor
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: Pitch) {
         let mut note = self.note(cursor).unwrap();
@@ -551,24 +535,59 @@ impl Scof {
     pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
         let mut note = self.note(cursor).unwrap();
         let old = note.duration;
-        cala::info!("AAAA1");
         note.set_duration(dur);
-        cala::info!("AAAA2");
         if old > dur {
-            cala::info!("Shorter {} - {}", old, dur);
-            // FIXME: Note is becoming shorter.
-            let _rests = old - dur;
+            let rests = old - dur;
 
-            
+            self.insert_after(cursor, Note {
+                pitch: None,
+                duration: rests,
+                articulation: vec![],
+            });
         } else {
-            cala::info!("Longer {} - {}", dur, old);
-            // FIXME: Note is becoming longer.
-            let _tied_value = dur - old;
+            let mut tied_value = dur - old;
+            let mut cursor = cursor.clone();
 
-            
+            cala::note!("Longer by {}", tied_value);
+
+            while !tied_value.is_zero() {
+                cala::note!("Loop @{}", tied_value);
+                if let Some(mut note) = self.remove_after(&cursor) {
+                    cala::note!("Removed: {}", note.duration);
+                    if note.duration <= tied_value {
+                        tied_value -= note.duration;
+                        cala::note!("Decrement to: {}", tied_value);
+                    } else {
+                        note.duration -= tied_value;
+                        cala::note!("Reduce to: {}", note.duration);
+                        self.insert_after(&cursor, note);
+                        break;
+                    }
+                } else {
+                    cala::note!("Next measure");
+                    cursor.right(self);
+                }
+            }
         }
-        cala::info!("AAAA3");
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
+    }
+
+    /// Insert a note after the cursor.
+    fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
+        // FIXME: Implement insert?
+        let _string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
+            .insert(cursor.marking + 1, marking.to_string());
+        Some(())
+    }
+
+    /// Remove the note after the cursor.
+    fn remove_after(&mut self, cursor: &Cursor) -> Option<Note> {
+        let string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
+            .remove(cursor.marking + 1);
+
+        cala::note!("REMOVE \"{}\"", string);
+
+        string.parse::<Note>().ok().and_then(|a| Some(a))
     }
 }
