@@ -19,6 +19,8 @@ use muon_rs as muon;
 use serde_derive::{Deserialize, Serialize};
 use std::str::FromStr;
 
+use cala;
+
 pub mod note;
 mod fraction;
 
@@ -549,18 +551,23 @@ impl Scof {
     pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
         let mut note = self.note(cursor).unwrap();
         let old = note.duration;
+        cala::info!("AAAA1");
         note.set_duration(dur);
+        cala::info!("AAAA2");
         if old > dur {
+            cala::info!("Shorter {} - {}", old, dur);
             // FIXME: Note is becoming shorter.
             let _rests = old - dur;
 
             
         } else {
+            cala::info!("Longer {} - {}", dur, old);
             // FIXME: Note is becoming longer.
             let _tied_value = dur - old;
 
             
         }
+        cala::info!("AAAA3");
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
     }

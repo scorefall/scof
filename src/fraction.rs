@@ -130,14 +130,10 @@ impl PartialEq for Fraction {
 
 impl PartialOrd for Fraction {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let den = gcd_i(self.den, other.den);
+        let self_int = self.num as i32 * other.den as i32;
+        let other_int = other.num as i32 * self.den as i32;
 
-        let self_mul = (den / self.den) as i32;
-        let other_mul = (den / other.den) as i32;
-
-        let num = self.num as i32 * self_mul - other.num as i32 * other_mul;
-
-        num.partial_cmp(&0)
+        (self_int-other_int).partial_cmp(&0)
     }
 }
 
