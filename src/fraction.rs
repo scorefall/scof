@@ -297,4 +297,12 @@ mod tests {
     fn mult() {
         assert_eq!(0, Fraction::new(0, 1) * 32000);
     }
+
+    #[test]
+    fn more() {
+        assert!(Fraction::new(50, 25) > Fraction::new(99, 50));
+        assert!(Fraction::new(3, 4) > Fraction::new(1, 2));
+        assert!(Fraction::new(1, 3) > Fraction::new(1, 4));
+        assert_eq!(false, Fraction::new(0, 3) > Fraction::new(0, 4));
+    }
 }
