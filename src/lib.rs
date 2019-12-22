@@ -568,6 +568,36 @@ impl Scof {
         notes.push(note.to_string());
     }
 
+    /// Set a full measure to be replaced at the start.
+    pub fn set_full_measure(&mut self, cursor: &Cursor, note: Note) {
+        let notes = self.chan_notes_mut(cursor).unwrap();
+        let mut new_notes = vec![];
+        let mut quota = note.duration;
+
+        let mut i = 0;
+        i = loop {
+            let parsed_note: Note = notes[i].parse().unwrap();
+
+            i += 1;
+
+            if quota > parsed_note.duration {
+                quota -= parsed_note.duration;
+            } else if quota == parsed_note.duration {
+                new_notes.push(note.to_string());
+                break i;
+            } else {
+                let mut modified = parsed_note.clone();
+                modified.duration -= quota;
+                new_notes.push(note.to_string());
+                new_notes.push(modified.to_string());
+                break i;
+            }
+        };
+
+        new_notes.extend(notes.drain(i..notes.len()));
+        *notes = new_notes;
+    }
+
     /// Set whole rest at cursor to C4.
     pub fn set_whole_pitch(&mut self, cursor: &Cursor) {
         // If it's a whole measure rest, insert a whole note (4/4)
@@ -598,11 +628,20 @@ impl Scof {
                 cala::note!("Loop @{}", tied_value);
                 if cursor.right_fix(self) {
                     cala::note!("Next measure1");
-                    let m = if let Some(m) = self.marking_str_mut(&cursor) {
+                    if let Some(_m) = self.marking_str_mut(&cursor) {
                         cala::note!("Next measure22");
-                        m
+                        // Set the next measure.
+                        self.set_full_measure(&cursor, Note {
+                            pitch: note.pitch,
+                            duration: tied_value, // FIXME: Time Sig
+                            articulation: vec![],
+                        });
+                        note.duration -= tied_value;
+                        cala::note!("{:?}", cursor);
+                        break;
                     } else {
                         self.new_measure();
+                        // Set the next measure.
                         self.set_empty_measure(&cursor, Note {
                             pitch: note.pitch,
                             duration: tied_value, // FIXME: Time Sig
@@ -612,13 +651,12 @@ impl Scof {
                         cala::note!("{:?}", cursor);
                         break;
                     };
-                    let old_duration = note.duration;
-                    note.duration = tied_value;
+/*                    note.duration = tied_value;
                     *m = note.to_string();
-                    cursor.right(self);
-                    tied_value = old_duration - tied_value;
-                    note.duration = tied_value;
-                    cala::note!("Next measure3");
+                    // cursor.right(self);
+                    // tied_value = old_duration - tied_value;
+                    note.duration -= tied_value;
+                    cala::note!("Next measure3");*/
 
 /*                    cala::note!("Next measure");
                     cursor.right(self);
@@ -655,6 +693,8 @@ impl Scof {
                 }
             }
         }
+
+        // Set first note.
         let m = self.marking_str_mut(&cursor).unwrap();
         *m = note.to_string();
     }
