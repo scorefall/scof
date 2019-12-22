@@ -556,7 +556,7 @@ impl Scof {
     }
 
     /// Set an empty measure to be filled with all of the beats.
-    pub fn set_empty_measure(&mut self, cursor: &Cursor, mut note: Note) {
+    pub fn set_empty_measure(&mut self, cursor: &Cursor, note: Note) {
         // FIXME: Time Signatures
         self.chan_notes_mut(cursor).unwrap().push("1/1R".parse().unwrap());
         self.set_full_measure(
@@ -567,9 +567,20 @@ impl Scof {
 
     /// Set a full measure to be replaced at the start.
     pub fn set_full_measure(&mut self, cursor: &Cursor, note: Note) {
+        let mut cursor = cursor.clone();
+        cursor.marking = 0;
+        self.set_part_measure(&cursor, note)
+    }
+
+    /// Set a full measure to be replaced at the start.
+    pub fn set_part_measure(&mut self, cursor: &Cursor, note: Note) {
         let notes = self.chan_notes_mut(cursor).unwrap();
         let mut new_notes = vec![];
         let mut quota = note.duration;
+
+        let b = cursor.marking;
+
+        new_notes.extend(notes.drain(0..b));
 
         let mut i = 0;
         i = loop {
@@ -649,8 +660,24 @@ impl Scof {
                         break;
                     };
                 } else {
-                    cala::note!("Same measure");
-                    if let Some(mut note) = self.remove_at(&cursor) {
+//                    cursor.right(self);
+                    cursor.left(self);
+
+                    // Set first note.
+                    cala::note!("Same measure {}", cursor.marking);
+                    self.set_part_measure(&cursor, Note {
+                        pitch: note.pitch,
+                        duration: note.duration, // tied_value, // FIXME: Time Sig
+                        articulation: vec![],
+                    });
+                    cala::note!("Same measure2");
+
+                    let m = self.marking_str_mut(&cursor).unwrap();
+                    *m = note.to_string();
+
+                    return;
+
+/*                    if let Some(mut note) = self.remove_at(&cursor) {
                         cala::note!("Removed: {}", note.duration);
                         if note.duration <= tied_value {
                             tied_value -= note.duration;
@@ -671,7 +698,7 @@ impl Scof {
                         note.set_duration(Fraction::new(1, 1) - tied_value);
                         self.chan_notes_mut(&cursor).unwrap().push(note.to_string());
                         return;
-                    }
+                    }*/
                 }
             }
         }
