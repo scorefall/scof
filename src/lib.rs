@@ -670,69 +670,6 @@ impl Scof {
             }
             cala::note!("RFni");
         }
-/*
-//            let mut tied_value = dur - old;
-            let mut cursor = cursor.clone().right_unchecked();
-
-            cala::note!("Longer by {}", tied_value);
-
-            while !tied_value.is_zero() {
-                cala::note!("Loop @{}", tied_value);
-                if cursor.right_fix(self) {
-                    cala::note!("Next measure1");
-                    if let Some(_m) = self.marking_str_mut(&cursor) {
-                        cala::note!("Next measure22");
-                        // Set the next measure.
-                        // FIXME: Use Return Value
-                        self.set_full_measure(&cursor, Note {
-                            pitch: note.pitch,
-                            duration: tied_value, // FIXME: Time Sig
-                            articulation: vec![],
-                        });
-                        note.duration -= tied_value;
-                        cala::note!("{:?}", cursor);
-                        break;
-                    } else {
-                        self.new_measure();
-                        // Set the next measure.
-                        // FIXME: Use Return Value
-                        self.set_empty_measure(&cursor, Note {
-                            pitch: note.pitch,
-                            duration: tied_value, // FIXME: Time Sig
-                            articulation: vec![],
-                        });
-                        note.duration -= tied_value;
-                        cala::note!("{:?}", cursor);
-                        break;
-                    }
-                } else {
-                    cursor.left(self);
-
-                    // Set first note.
-                    cala::note!("Same measure {}", cursor.marking);
-                    let ret = self.set_part_measure(&cursor, Note {
-                        pitch: note.pitch,
-                        duration: note.duration,
-                        articulation: vec![],
-                    });
-                    cala::note!("Same measure2");
-
-                    let m = self.marking_str_mut(&cursor).unwrap();
-                    *m = note.to_string();
-
-                    if let Some(left) = ret {
-                        tied_value = left;
-                        continue;
-                    } else {
-                        return;
-                    }
-                }
-            }
-        }
-
-        // Set first note.
-        let m = self.marking_str_mut(&cursor).unwrap();
-        *m = note.to_string();*/
     }
 
     pub fn set_whole_duration(&mut self, cursor: &Cursor, dur: Fraction) {
