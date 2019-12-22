@@ -556,7 +556,10 @@ impl Scof {
     }
 
     /// Set an empty measure to be filled with all of the beats.
-    pub fn set_empty_measure(&mut self, cursor: &Cursor, note: Note) {
+    /// Returns the fraction that doesn't fit in the measure.
+    pub fn set_empty_measure(&mut self, cursor: &Cursor, note: Note)
+        -> Option<Fraction>
+    {
         // FIXME: Time Signatures
         self.chan_notes_mut(cursor).unwrap().push("1/1R".parse().unwrap());
         self.set_full_measure(
@@ -566,14 +569,20 @@ impl Scof {
     }
 
     /// Set a full measure to be replaced at the start.
-    pub fn set_full_measure(&mut self, cursor: &Cursor, note: Note) {
+    /// Returns the fraction that doesn't fit in the measure.
+    pub fn set_full_measure(&mut self, cursor: &Cursor, note: Note)
+        -> Option<Fraction>
+    {
         let mut cursor = cursor.clone();
         cursor.marking = 0;
         self.set_part_measure(&cursor, note)
     }
 
     /// Set a full measure to be replaced at the start.
-    pub fn set_part_measure(&mut self, cursor: &Cursor, note: Note) {
+    /// Returns the fraction that doesn't fit in the measure.
+    pub fn set_part_measure(&mut self, cursor: &Cursor, mut note: Note)
+        -> Option<Fraction>
+    {
         let notes = self.chan_notes_mut(cursor).unwrap();
         let mut new_notes = vec![];
         let mut quota = note.duration;
@@ -584,6 +593,13 @@ impl Scof {
 
         let mut i = 0;
         i = loop {
+            if i == notes.len() {
+                note.duration -= quota;
+                new_notes.push(note.to_string());
+                *notes = new_notes;
+                return Some(quota);
+            }
+
             let parsed_note: Note = notes[i].parse().unwrap();
 
             i += 1;
@@ -604,6 +620,8 @@ impl Scof {
 
         new_notes.extend(notes.drain(i..notes.len()));
         *notes = new_notes;
+
+        None
     }
 
     /// Set whole rest at cursor to C4.
@@ -626,8 +644,26 @@ impl Scof {
                 duration: rests,
                 articulation: vec![],
             });
+
+            // Set first note.
+            let m = self.marking_str_mut(&cursor).unwrap();
+            *m = note.to_string();
         } else {
-            let mut tied_value = dur - old;
+            let mut cursor = cursor.clone();
+
+            while let Some(rem) = self.set_part_measure(&cursor, note.clone()) {
+                cala::note!("Remainder {}", rem);
+                cursor.measure += 1;
+                cursor.marking = 0;
+                self.new_measure();
+                self.chan_notes_mut(&cursor).unwrap().push("1/1R".parse().unwrap());
+                note.set_duration(rem);
+                cala::note!("Next…");
+            }
+            cala::note!("RFni");
+        }
+/*
+//            let mut tied_value = dur - old;
             let mut cursor = cursor.clone().right_unchecked();
 
             cala::note!("Longer by {}", tied_value);
@@ -639,6 +675,7 @@ impl Scof {
                     if let Some(_m) = self.marking_str_mut(&cursor) {
                         cala::note!("Next measure22");
                         // Set the next measure.
+                        // FIXME: Use Return Value
                         self.set_full_measure(&cursor, Note {
                             pitch: note.pitch,
                             duration: tied_value, // FIXME: Time Sig
@@ -650,6 +687,7 @@ impl Scof {
                     } else {
                         self.new_measure();
                         // Set the next measure.
+                        // FIXME: Use Return Value
                         self.set_empty_measure(&cursor, Note {
                             pitch: note.pitch,
                             duration: tied_value, // FIXME: Time Sig
@@ -658,16 +696,15 @@ impl Scof {
                         note.duration -= tied_value;
                         cala::note!("{:?}", cursor);
                         break;
-                    };
+                    }
                 } else {
-//                    cursor.right(self);
                     cursor.left(self);
 
                     // Set first note.
                     cala::note!("Same measure {}", cursor.marking);
-                    self.set_part_measure(&cursor, Note {
+                    let ret = self.set_part_measure(&cursor, Note {
                         pitch: note.pitch,
-                        duration: note.duration, // tied_value, // FIXME: Time Sig
+                        duration: note.duration,
                         articulation: vec![],
                     });
                     cala::note!("Same measure2");
@@ -675,37 +712,19 @@ impl Scof {
                     let m = self.marking_str_mut(&cursor).unwrap();
                     *m = note.to_string();
 
-                    return;
-
-/*                    if let Some(mut note) = self.remove_at(&cursor) {
-                        cala::note!("Removed: {}", note.duration);
-                        if note.duration <= tied_value {
-                            tied_value -= note.duration;
-                            cala::note!("Decrement to: {}", tied_value);
-                        } else {
-                            note.duration -= tied_value;
-                            cala::note!("Reduce to: {}", note.duration);
-                            self.insert_at(&cursor, note);
-                            break;
-                        }
+                    if let Some(left) = ret {
+                        tied_value = left;
+                        continue;
                     } else {
-                        cala::note!("Creating new measure: {}", note.duration);
-                        // Create new measure.
-                        cursor.right(self);
-                        note.set_duration(tied_value);
-                        self.chan_notes_mut(&cursor).unwrap().push(note.to_string());
-                        note.pitch = None;
-                        note.set_duration(Fraction::new(1, 1) - tied_value);
-                        self.chan_notes_mut(&cursor).unwrap().push(note.to_string());
                         return;
-                    }*/
+                    }
                 }
             }
         }
 
         // Set first note.
         let m = self.marking_str_mut(&cursor).unwrap();
-        *m = note.to_string();
+        *m = note.to_string();*/
     }
 
     pub fn set_whole_duration(&mut self, cursor: &Cursor, dur: Fraction) {
