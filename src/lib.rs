@@ -557,7 +557,7 @@ impl Scof {
 
     /// Set an empty measure to be filled with all of the beats.
     /// Returns the fraction that doesn't fit in the measure.
-    pub fn set_empty_measure(&mut self, cursor: &Cursor, note: Note)
+    pub fn set_empty_measure(&mut self, cursor: &Cursor, note: &Note)
         -> Option<Fraction>
     {
         // FIXME: Time Signatures
@@ -570,7 +570,7 @@ impl Scof {
 
     /// Set a full measure to be replaced at the start.
     /// Returns the fraction that doesn't fit in the measure.
-    pub fn set_full_measure(&mut self, cursor: &Cursor, note: Note)
+    pub fn set_full_measure(&mut self, cursor: &Cursor, note: &Note)
         -> Option<Fraction>
     {
         let mut cursor = cursor.clone();
@@ -580,9 +580,11 @@ impl Scof {
 
     /// Set a full measure to be replaced at the start.
     /// Returns the fraction that doesn't fit in the measure.
-    pub fn set_part_measure(&mut self, cursor: &Cursor, mut note: Note)
+    pub fn set_part_measure(&mut self, cursor: &Cursor, note: &Note)
         -> Option<Fraction>
     {
+        let mut note = note.clone();
+
         let notes = self.chan_notes_mut(cursor).unwrap();
         let mut new_notes = vec![];
         let mut quota = note.duration;
@@ -594,6 +596,7 @@ impl Scof {
         let mut i = 0;
         i = loop {
             if i == notes.len() {
+                cala::note!("END {} {}", note.duration, quota);
                 note.duration -= quota;
                 new_notes.push(note.to_string());
                 *notes = new_notes;
@@ -617,6 +620,8 @@ impl Scof {
                 break i;
             }
         };
+
+        cala::note!("FINISH {}", note.duration);
 
         new_notes.extend(notes.drain(i..notes.len()));
         *notes = new_notes;
@@ -651,12 +656,15 @@ impl Scof {
         } else {
             let mut cursor = cursor.clone();
 
-            while let Some(rem) = self.set_part_measure(&cursor, note.clone()) {
+            while let Some(rem) = self.set_part_measure(&cursor, &note) {
                 cala::note!("Remainder {}", rem);
                 cursor.measure += 1;
                 cursor.marking = 0;
                 self.new_measure();
-                self.chan_notes_mut(&cursor).unwrap().push("1/1R".parse().unwrap());
+                let notes = self.chan_notes_mut(&cursor).unwrap();
+                if notes.is_empty() {
+                    notes.push("1/1R".parse().unwrap());
+                }
                 note.set_duration(rem);
                 cala::note!("Next…");
             }
@@ -734,7 +742,7 @@ impl Scof {
             articulation: vec![],
         };
 
-        self.set_empty_measure(cursor, note);
+        self.set_empty_measure(cursor, &note);
     }
 
     // FIXME: Needed?
