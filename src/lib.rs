@@ -557,15 +557,12 @@ impl Scof {
 
     /// Set an empty measure to be filled with all of the beats.
     pub fn set_empty_measure(&mut self, cursor: &Cursor, mut note: Note) {
-        let notes = self.chan_notes_mut(cursor).unwrap();
-
-        notes.push(note.to_string());
-
         // FIXME: Time Signatures
-        note.duration = Fraction::new(1, 1) - note.duration;
-        note.pitch = None;
-
-        notes.push(note.to_string());
+        self.chan_notes_mut(cursor).unwrap().push("1/1R".parse().unwrap());
+        self.set_full_measure(
+            cursor,
+            note,
+        )
     }
 
     /// Set a full measure to be replaced at the start.
@@ -651,21 +648,6 @@ impl Scof {
                         cala::note!("{:?}", cursor);
                         break;
                     };
-/*                    note.duration = tied_value;
-                    *m = note.to_string();
-                    // cursor.right(self);
-                    // tied_value = old_duration - tied_value;
-                    note.duration -= tied_value;
-                    cala::note!("Next measure3");*/
-
-/*                    cala::note!("Next measure");
-                    cursor.right(self);
-                    cala::note!("Next measure2");
-                    note.set_duration(tied_value);
-                    let m = self.marking_str_mut(&cursor).unwrap();
-                    *m = note.to_string();
-                    cala::note!("Next measure3");*/
-                    // FIXME: Instead of breaking, implement ties.
                 } else {
                     cala::note!("Same measure");
                     if let Some(mut note) = self.remove_at(&cursor) {
