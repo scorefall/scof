@@ -604,12 +604,13 @@ impl Scof {
                     } else {
                         self.new_measure();
                         self.set_empty_measure(&cursor, Note {
-                            pitch: None,
-                            duration: Fraction::new(1, 1), // FIXME: Time Sig
+                            pitch: note.pitch,
+                            duration: tied_value, // FIXME: Time Sig
                             articulation: vec![],
                         });
+                        note.duration -= tied_value;
                         cala::note!("{:?}", cursor);
-                        continue;
+                        break;
                     };
                     let old_duration = note.duration;
                     note.duration = tied_value;
