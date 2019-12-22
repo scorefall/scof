@@ -259,7 +259,7 @@ pub struct Chan {
 
 impl Default for Chan {
     fn default() -> Self {
-        let notes = vec!["R".to_string()]; // whole measure rest
+        let notes = vec![]; // no notes = whole measure rest
         let lyric = vec![];
         Chan { notes, lyric }
     }
@@ -536,14 +536,18 @@ impl Scof {
     /// Set pitch class and octave of a note at a cursor
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: Pitch) {
         let mut note = self.note(cursor).unwrap();
-/*      if note.duration.is_empty() {
-            // If it's a whole measure rest, insert a whole note (4/4)
-            // FIXME: Add time signatures.
-            note.duration = vec![Duration::Num1(1, 1, 0)];
-        }*/
         note.set_pitch(pitch);
         let m = self.marking_str_mut(cursor).unwrap();
         *m = note.to_string();
+    }
+
+    /// Set whole rest at cursor to C4.
+    pub fn set_whole_pitch(&mut self, cursor: &Cursor) {
+        let note: Note = "1/1C4".parse().unwrap();
+            // If it's a whole measure rest, insert a whole note (4/4)
+            // FIXME: Add time signatures.
+
+        self.chan_notes_mut(cursor).unwrap().push(note.to_string());
     }
 
     /// Set duration of a note.
@@ -593,6 +597,27 @@ impl Scof {
         }
         let m = self.marking_str_mut(&cursor).unwrap();
         *m = note.to_string();
+    }
+
+    pub fn set_whole_duration(&mut self, cursor: &Cursor, dur: Fraction) {
+        let whole_measure_dur = Fraction::new(1, 1);
+        let left_over = whole_measure_dur - dur;
+
+        let new = Note {
+            pitch: None,
+            duration: dur,
+            articulation: vec![],
+        }.to_string();
+        let rem = Note {
+            pitch: None,
+            duration: left_over,
+            articulation: vec![],
+        }.to_string();
+
+        let notes = self.chan_notes_mut(cursor).unwrap();
+
+        notes.push(new);
+        notes.push(rem);
     }
 
     // FIXME: Needed?

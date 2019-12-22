@@ -4,7 +4,7 @@ use std::str::FromStr;
 use crate::note::Steps;
 
 /// A Pitch Name.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PitchName {
     C = 0,
     D = 1,
@@ -49,7 +49,7 @@ impl FromStr for PitchName {
 }
 
 /// A Pitch Accidental.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PitchAccidental {
     ///
     DoubleFlat,
@@ -109,7 +109,7 @@ impl FromStr for PitchAccidental {
 }
 
 /// A Pitch Class
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PitchClass {
     pub name: PitchName,
     pub accidental: Option<PitchAccidental>,
@@ -146,7 +146,7 @@ impl FromStr for PitchClass {
 }
 
 /// A Pitch Octave
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(i8)]
 pub enum PitchOctave {
     /// Octave -1
@@ -255,7 +255,7 @@ impl FromStr for PitchOctave {
 }
 
 /// Pitch Class & Octave
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Pitch(pub PitchClass, pub PitchOctave);
 
 impl Pitch {

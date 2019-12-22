@@ -3,7 +3,7 @@
 use std::{fmt, str::FromStr};
 
 /// An articulation (affects how the note is played).
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Articulation {
     /// Really separated.
     Staccatissimo,

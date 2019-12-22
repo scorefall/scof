@@ -106,7 +106,7 @@ impl std::ops::Div<i32> for Steps {
 }
 
 /// A note.
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Note {
     /// Pitch Class & Octave
     pub pitch: Option<Pitch>,
@@ -319,5 +319,19 @@ impl FromStr for Note {
             duration,
             articulation: articulation.clone(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rest() {
+        assert_eq!("1/1R".parse::<Note>().unwrap(), Note {
+            pitch: None,
+            duration: Fraction::new(1, 1),
+            articulation: vec![],
+        });
     }
 }
