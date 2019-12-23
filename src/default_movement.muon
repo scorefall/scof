@@ -2,6 +2,6 @@ sig: 0
   time: 4/4
   tempo: 120
 bar:
-  sig:
-    index: 0
+  sig: 0
   chan: 1/4C4 3/4R
+

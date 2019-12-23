@@ -121,6 +121,7 @@ impl Cursor {
 }
 
 /// A Dynamic.
+#[derive(Clone, Debug, PartialEq)]
 pub enum Dynamic {
     PPPPPP,
     PPPPP,
@@ -144,6 +145,7 @@ pub enum Dynamic {
 }
 
 /// A marking.
+#[derive(Clone, Debug, PartialEq)]
 pub enum Marking {
     /// Change intensity of sound.
     Dynamic(Dynamic),
@@ -265,17 +267,49 @@ pub struct Sig {
 
 /// Channel information for a specific bar of music.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub struct Chan {
-    /// Notes for a channel
-    notes: Vec<String>,
-    lyric: Vec<String>,
+struct Chan {
+    /// Channel notes for 1 bar.
+    notes: String,
+    /// Channel lyrics for 1 bar.
+    lyric: Option<String>,
+}
+
+/// A parsed and transformed channel information for a specific bar of music.
+#[derive(PartialEq, Debug)]
+pub struct Channel {
+    /// Channel notes for 1 bar.
+    notes: Vec<Marking>,
+    /// Channel lyrics for 1 bar.
+    lyric: Option<String>,
 }
 
 impl Default for Chan {
     fn default() -> Self {
-        let notes = vec![]; // no notes = whole measure rest
-        let lyric = vec![];
+        let notes = String::new(); // no notes = whole measure rest
+        let lyric = None;
         Chan { notes, lyric }
+    }
+}
+
+impl Default for Channel {
+    fn default() -> Self {
+        Chan::default().into()
+    }
+}
+
+impl From<Chan> for Channel {
+    fn from(chan: Chan) -> Self {
+        let mut notes = vec![];
+
+        for marking in chan.notes.split(' ').filter(|m| !m.is_empty()) {
+            notes.push(marking.parse().unwrap_or_else(|_| {
+                panic!("Invalid marking: {}", marking);
+            }));
+        }
+
+        let lyric = chan.lyric;
+
+        Channel { notes, lyric }
     }
 }
 
@@ -291,25 +325,80 @@ pub struct SigRef {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Bar {
     /// Signature reference (index)
+    sig: Option<SigRef>,
+    /// All of the channels in this piece.
+    chan: Vec<Chan>,
+    /// Repeat symbols for this measure.
+    repeat: Vec<String>,
+}
+
+/// A bar (or measure) of music.
+#[derive(Debug, PartialEq)]
+pub struct Measure {
+    /// Signature reference (index)
     pub sig: Option<SigRef>,
     /// All of the channels in this piece.
-    pub chan: Vec<Chan>,
+    pub chan: Vec<Channel>,
     /// Repeat symbols for this measure.
     pub repeat: Vec<String>,
 }
 
+impl From<Bar> for Measure {
+    fn from(mut bar: Bar) -> Self {
+        let mut chan = vec![];
+
+        for i in bar.chan.drain(..) {
+            chan.push(i.into());
+        }
+
+        let sig = bar.sig;
+        let repeat = bar.repeat;
+
+        Measure { sig, chan, repeat }
+    }
+}
+
 /// A movement in the score.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub struct Movement {
+pub struct Mvmt {
     /// A list of key signatures used in this movement.
     pub sig: Vec<Sig>,
     /// Each measure of the movement in order.
     pub bar: Vec<Bar>,
 }
 
+impl Default for Mvmt {
+    fn default() -> Mvmt {
+        muon::from_str(include_str!("default_movement.muon")).unwrap()
+    }
+}
+
+impl From<Mvmt> for Movement {
+    fn from(mut mvmt: Mvmt) -> Movement {
+        let mut bar = vec![];
+
+        for i in mvmt.bar.drain(..) {
+            bar.push(i.into());
+        }
+
+        let sig = mvmt.sig;
+
+        Movement { sig, bar }
+    }
+}
+
+/// A movement in the score.
+#[derive(PartialEq, Debug)]
+pub struct Movement {
+    /// A list of key signatures used in this movement.
+    pub sig: Vec<Sig>,
+    /// Each measure of the movement in order.
+    pub bar: Vec<Measure>,
+}
+
 impl Default for Movement {
     fn default() -> Movement {
-        muon::from_str(include_str!("default_movement.muon")).unwrap()
+        Mvmt::default().into()
     }
 }
 
@@ -477,33 +566,33 @@ impl Default for Scof {
 
 impl Scof {
     /// Lookup a marking at a cursor position
-    fn marking_str(&self, cursor: &Cursor) -> Option<&String> {
+    pub fn marking(&self, cursor: &Cursor) -> Option<&Marking> {
         self.movement.get(cursor.movement)?
             .bar.get(cursor.measure)?
             .chan.get(cursor.chan)?
             .notes.get(cursor.marking)
     }
 
-    /// Get mutable vec of notes for measure at cursor position.
-    fn chan_notes_mut(&mut self, cursor: &Cursor) -> Option<&mut Vec<String>> {
+    /// Get mutable marking at a cursor position
+    pub fn marking_mut(&mut self, cursor: &Cursor) -> Option<&mut Marking> {
+        self.chan_notes_mut(cursor)?.get_mut(cursor.marking)
+    }
+
+    /// Get mutable vec of markings for measure at cursor position.
+    fn chan_notes_mut(&mut self, cursor: &Cursor) -> Option<&mut Vec<Marking>> {
         Some(&mut self.movement.get_mut(cursor.movement)?
             .bar.get_mut(cursor.measure)?
             .chan.get_mut(cursor.chan)?
             .notes)
     }
 
-    /// Get mutable marking at a cursor position
-    fn marking_str_mut(&mut self, cursor: &Cursor) -> Option<&mut String> {
-        self.chan_notes_mut(cursor)?.get_mut(cursor.marking)
-    }
-
     /// Get the last measure of a movement
-    fn last_measure(&self, movement: usize) -> Option<&Bar> {
+    fn last_measure(&self, movement: usize) -> Option<&Measure> {
         Some(self.movement.get(movement)?.bar.last()?)
     }
 
     /// Push a measure at end of movement
-    fn push_measure(&mut self, movement: usize, bar: Bar) {
+    fn push_measure(&mut self, movement: usize, bar: Measure) {
         if let Some(movement) = &mut self.movement.get_mut(movement) {
             movement.bar.push(bar);
         }
@@ -515,9 +604,9 @@ impl Scof {
             // Add whole rests for each channel.
             let mut chan = vec![];
             for _ in last_bar.chan.iter() {
-                chan.push(Chan::default());
+                chan.push(Channel::default());
             }
-            self.push_measure(0, Bar {
+            self.push_measure(0, Measure {
                 sig: None,      // No signature changes
                 repeat: vec![], // No repeat symbols
                 chan,
@@ -535,24 +624,21 @@ impl Scof {
         curs.marking
     }
 
-    /// Get the marking at cursor
-    pub fn marking(&self, cursor: &Cursor) -> Option<Marking> {
-        let string = self.marking_str(cursor)?;
-        string.parse::<Marking>().ok()
-    }
-
     /// Get the note at cursor
-    pub fn note(&self, cursor: &Cursor) -> Option<Note> {
-        let string = self.marking_str(cursor)?;
-        string.parse::<Note>().ok().and_then(|a| Some(a))
+    pub fn note(&self, cursor: &Cursor) -> Option<&Note> {
+        if let Marking::Note(note) = self.marking(cursor)? {
+            Some(note)
+        } else {
+            None
+        }
     }
 
     /// Set pitch class and octave of a note at a cursor
     pub fn set_pitch(&mut self, cursor: &Cursor, pitch: Pitch) {
-        let mut note = self.note(cursor).unwrap();
+        let mut note = self.note(cursor).unwrap().clone();
         note.set_pitch(pitch);
-        let m = self.marking_str_mut(cursor).unwrap();
-        *m = note.to_string();
+        let m = self.marking_mut(cursor).unwrap();
+        *m = Marking::Note(note);
     }
 
     /// Set an empty measure to be filled with all of the beats.
@@ -598,30 +684,31 @@ impl Scof {
             if i == notes.len() {
                 cala::note!("END {} {}", note.duration, quota);
                 note.duration -= quota;
-                new_notes.push(note.to_string());
+                new_notes.push(Marking::Note(note));
                 *notes = new_notes;
                 return Some(quota);
             }
 
-            let parsed_note: Note = notes[i].parse().unwrap();
+            let marking: &Marking = &notes[i];
 
             i += 1;
 
-            if quota > parsed_note.duration {
-                quota -= parsed_note.duration;
-            } else if quota == parsed_note.duration {
-                new_notes.push(note.to_string());
-                break i;
-            } else {
-                let mut modified = parsed_note.clone();
-                modified.duration -= quota;
-                new_notes.push(note.to_string());
-                new_notes.push(modified.to_string());
-                break i;
+            // Only count notes.
+            if let Marking::Note(parsed_note) = marking {
+                if quota > parsed_note.duration {
+                    quota -= parsed_note.duration;
+                } else if quota == parsed_note.duration {
+                    new_notes.push(Marking::Note(note));
+                    break i;
+                } else {
+                    let mut modified = parsed_note.clone();
+                    modified.duration -= quota;
+                    new_notes.push(Marking::Note(note));
+                    new_notes.push(Marking::Note(modified));
+                    break i;
+                }
             }
         };
-
-        cala::note!("FINISH {}", note.duration);
 
         new_notes.extend(notes.drain(i..notes.len()));
         *notes = new_notes;
@@ -633,26 +720,26 @@ impl Scof {
     pub fn set_whole_pitch(&mut self, cursor: &Cursor) {
         // If it's a whole measure rest, insert a whole note (4/4)
         // FIXME: Add time signatures.
-        self.chan_notes_mut(cursor).unwrap().push("1/1C4".to_string());
+        self.chan_notes_mut(cursor).unwrap().push("1/1C4".parse().unwrap());
     }
 
     /// Set duration of a note.
     pub fn set_duration(&mut self, cursor: &Cursor, dur: Fraction) {
-        let mut note = self.note(cursor).unwrap();
+        let mut note = self.note(cursor).unwrap().clone();
         let old = note.duration;
         note.set_duration(dur);
         if old > dur {
             let rests = old - dur;
 
-            self.insert_after(cursor, Note {
+            self.insert_after(cursor, Marking::Note(Note {
                 pitch: None,
                 duration: rests,
                 articulation: vec![],
-            });
+            }));
 
             // Set first note.
-            let m = self.marking_str_mut(&cursor).unwrap();
-            *m = note.to_string();
+            let m = self.marking_mut(&cursor).unwrap();
+            *m = Marking::Note(note);
         } else {
             let mut cursor = cursor.clone();
 
@@ -684,25 +771,25 @@ impl Scof {
 
     // FIXME: Needed?
     /// Insert a note after the cursor.
-    fn insert_after(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
+    fn insert_after(&mut self, cursor: &Cursor, marking: Marking) -> Option<()> {
         let _string = self.chan_notes_mut(&cursor.clone().right_unchecked())?
-            .insert(cursor.marking + 1, marking.to_string());
+            .insert(cursor.marking + 1, marking);
         Some(())
     }
 
     /// Insert a note after the cursor.
-    fn insert_at(&mut self, cursor: &Cursor, marking: Note) -> Option<()> {
-        self.chan_notes_mut(cursor)?.insert(cursor.marking, marking.to_string());
+    fn insert_at(&mut self, cursor: &Cursor, marking: Marking) -> Option<()> {
+        self.chan_notes_mut(cursor)?.insert(cursor.marking, marking);
         Some(())
     }
 
     /// Remove the note after the cursor.
-    fn remove_at(&mut self, cursor: &Cursor) -> Option<Note> {
+    fn remove_at(&mut self, cursor: &Cursor) -> Option<Marking> {
         let notes = self.chan_notes_mut(cursor)?;
-        let string = notes.remove(cursor.marking);
+        let note = notes.remove(cursor.marking);
 
-        cala::note!("REMOVE \"{}\"", string);
+        cala::note!("REMOVE \"{:?}\"", note);
 
-        string.parse::<Note>().ok().and_then(|a| Some(a))
+        Some(note)
     }
 }
