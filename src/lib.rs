@@ -634,9 +634,9 @@ impl Scof {
     }
 
     /// Set pitch class and octave of a note at a cursor
-    pub fn set_pitch(&mut self, cursor: &Cursor, pitch: Pitch) {
+    pub fn set_pitch(&mut self, cursor: &Cursor, i: usize, pitch: Pitch) {
         let mut note = self.note(cursor).unwrap().clone();
-        note.set_pitch(pitch);
+        note.set_pitch(i, pitch);
         let m = self.marking_mut(cursor).unwrap();
         *m = Marking::Note(note);
     }
@@ -732,7 +732,7 @@ impl Scof {
             let rests = old - dur;
 
             self.insert_after(cursor, Marking::Note(Note {
-                pitch: None,
+                pitch: vec![],
                 duration: rests,
                 articulation: vec![],
             }));
@@ -761,7 +761,7 @@ impl Scof {
 
     pub fn set_whole_duration(&mut self, cursor: &Cursor, dur: Fraction) {
         let note = Note {
-            pitch: None,
+            pitch: vec![],
             duration: dur,
             articulation: vec![],
         };

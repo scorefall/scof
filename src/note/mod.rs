@@ -109,7 +109,7 @@ impl std::ops::Div<i32> for Steps {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Note {
     /// Pitch Class & Octave
-    pub pitch: Option<Pitch>,
+    pub pitch: Vec<Pitch>,
     /// Duration of the note as a fraction.
     pub duration: Fraction,
     /// Articulation.
@@ -122,11 +122,15 @@ impl fmt::Display for Note {
         write!(f, "{}", self.duration)?;
 
         // Write pitch
-        match self.pitch {
-            // Write note name & octave.
-            Some(ref pitch) => write!(f, "{}", pitch)?,
+        if self.pitch.is_empty() {
             // Write R for rest.
-            None => write!(f, "R")?,
+            write!(f, "R")?;
+        } else {
+            // Write chord
+            for pitch in &self.pitch {
+                // Write note name & octave.
+                write!(f, "{}", pitch)?;
+            }
         }
 
         // Write articulation symbols.
@@ -140,8 +144,8 @@ impl fmt::Display for Note {
 
 impl Note {
     /// Get the note's visual distance above middle C (C4).
-    pub fn visual_distance(&self) -> Option<Steps> {
-        if let Some(ref pitch) = self.pitch {
+    pub fn visual_distance(&self, i: usize) -> Option<Steps> {
+        if let Some(pitch) = self.pitch.get(i) {
             Some(pitch.visual_distance())
         } else {
             None
@@ -149,8 +153,8 @@ impl Note {
     }
 
     /// Set pitch class and octave.
-    pub fn set_pitch(&mut self, pitch: Pitch) {
-        self.pitch = Some(pitch);
+    pub fn set_pitch(&mut self, i: usize, pitch: Pitch) {
+        self.pitch[i] = pitch;
     }
 
     /// Set duration of note.
@@ -163,11 +167,14 @@ impl Note {
         self.duration
     }
 
-    fn move_step(&self, create: Pitch, run: &dyn Fn(&Pitch) -> Option<Pitch>) -> Note {
-        let pitch = if let Some(ref pitch) = self.pitch {
+    fn move_step(&self, i: usize, create: Pitch, run: &dyn Fn(&Pitch) -> Pitch)
+        -> Note
+    {
+        let mut pitch = self.pitch.clone();
+        pitch[i] = if let Some(pitch) = self.pitch.get(i) {
             (run)(pitch)
         } else {
-            Some(create)
+            create
         };
 
         Note {
@@ -178,29 +185,29 @@ impl Note {
     }
 
     /// Calculate note one quarter step up.
-    pub fn quarter_step_up(&self, create: Pitch) -> Note {
-        self.step_up(create) // FIXME
+    pub fn quarter_step_up(&self, i: usize, create: Pitch) -> Note {
+        self.step_up(i, create) // FIXME
     }
 
     /// Calculate note one quarter step down.
-    pub fn quarter_step_down(&self, create: Pitch) -> Note {
-        self.step_down(create) // FIXME
+    pub fn quarter_step_down(&self, i: usize, create: Pitch) -> Note {
+        self.step_down(i, create) // FIXME
     }
 
     /// Calculate note one half step up.
-    pub fn half_step_up(&self, create: Pitch) -> Note {
-        self.step_up(create) // FIXME
+    pub fn half_step_up(&self, i: usize, create: Pitch) -> Note {
+        self.step_up(i, create) // FIXME
     }
 
     /// Calculate note one half step down.
-    pub fn half_step_down(&self, create: Pitch) -> Note {
-        self.step_down(create) // FIXME
+    pub fn half_step_down(&self, i: usize, create: Pitch) -> Note {
+        self.step_down(i, create) // FIXME
     }
 
     /// Calculate note one step up within the key.
     /// - `create`: Note that is generated from a rest.
-    pub fn step_up(&self, create: Pitch) -> Note {
-        self.move_step(create, &|pitch| {
+    pub fn step_up(&self, i: usize, create: Pitch) -> Note {
+        self.move_step(i, create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::B, false),
                 PitchName::B => (PitchName::C, true),
@@ -217,20 +224,20 @@ impl Note {
             };
 
             if let Some(pitch_octave) = pitch_octave {
-                Some(Pitch(PitchClass {
+                Pitch(PitchClass {
                     name: pitch_class,
                     accidental: pitch.0.accidental,
-                }, pitch_octave))
+                }, pitch_octave)
             } else {
-                Some(*pitch)
+                *pitch
             }
         })
     }
 
     /// Calculate note one step down within the key.
     /// - `create`: Note that is generated from a rest.
-    pub fn step_down(&self, create: Pitch) -> Note {
-        self.move_step(create, &|pitch| {
+    pub fn step_down(&self, i: usize, create: Pitch) -> Note {
+        self.move_step(i, create, &|pitch| {
             let (pitch_class, offset) = match pitch.0.name {
                 PitchName::A => (PitchName::G, false),
                 PitchName::B => (PitchName::A, false),
@@ -247,12 +254,12 @@ impl Note {
             };
 
             if let Some(pitch_octave) = pitch_octave {
-                Some(Pitch(PitchClass {
+                Pitch(PitchClass {
                     name: pitch_class,
                     accidental: pitch.0.accidental,
-                }, pitch_octave))
+                }, pitch_octave)
             } else {
-                Some(Pitch(pitch.0, pitch.1))
+                Pitch(pitch.0, pitch.1)
             }
         })
     }
@@ -275,35 +282,45 @@ impl FromStr for Note {
         }
         let mut end_index = end_index?;
         let duration = s[..end_index].parse::<Fraction>().or(Err(()))?;
+        let mut pitch = vec![]; // Rest
 
-        // Read pitch
-        let begin_index = end_index;
-        let pitch = match s.get(begin_index..).ok_or(())? {
-            "R" => {
-                None
-            }
-            _ => {
-                // Get Pitch Class
-                let mut end_index2 = Err(());
-                for (i, c) in s.char_indices().skip(begin_index) {
-                    match c {
-                        '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
-                            | '8' | '9' =>
-                        {
-                            end_index2 = Ok(i);
-                            break;
-                        }
-                        _ => {}
-                    }
+        // Read pitches
+        'note_pitches: loop {
+            let begin_index = end_index;
+            let pitch = match s.get(begin_index..).ok_or(())? {
+                // Find rest, used in absence of notes.
+                "" => break 'note_pitches,
+                "R" => {
+                    end_index += 1;
+                    break 'note_pitches
                 }
-                end_index = end_index2?;
+                // Find notes
+                text => {
+                    match text.chars().next().unwrap() {
+                        'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'R' => {}
+                        _ => break 'note_pitches
+                    }
+                    // Get Pitch Class
+                    let mut end_index2 = Err(());
+                    for (i, c) in s.char_indices().skip(begin_index) {
+                        match c {
+                            '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'
+                                | '8' | '9' =>
+                            {
+                                end_index2 = Ok(i);
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                    end_index = end_index2? + 1;
 
-                let pitch = s[begin_index..end_index+1].parse::<Pitch>()?;
+                    let pitch2 = s[begin_index..end_index].parse::<Pitch>()?;
 
-                Some(pitch)
-            }
-        };
-        end_index += 1;
+                    pitch.push(pitch2)
+                }
+            };
+        }
 
         // Read articulation symbols.
         let mut articulation = vec![];
