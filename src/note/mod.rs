@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn rest() {
         assert_eq!("1/1R".parse::<Note>().unwrap(), Note {
-            pitch: None,
+            pitch: vec![],
             duration: Fraction::new(1, 1),
             articulation: vec![],
         });
